@@ -125,3 +125,12 @@ export const getSingleBooking = async (req, res) => {
         
     }
 }
+
+export const getBookingController = async (req, res) => {
+    try {
+        const bookingInvoices = await shipmentSchemaModel.find({},'InvoiceNo')
+        return sendResponse(res, 200,false,{}, {bookingInvoices,message:"Get all booking Invoices"});
+    } catch (error) {
+         return sendResponse(res,500,true,{ general: error.message },null)
+    }
+}

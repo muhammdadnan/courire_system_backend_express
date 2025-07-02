@@ -1,8 +1,9 @@
 import express from 'express'
-import {addBookingController,getSingleBooking} from '../controllers/booking.controller.js'
+import {addBookingController,getSingleBooking,getBookingController} from '../controllers/booking.controller.js'
 const router = express.Router() 
 
 router.post('/addBooking', addBookingController)
 router.get('/singleBooking',getSingleBooking)
 
+router.get("/allBooking",getBookingController)
 export default router
