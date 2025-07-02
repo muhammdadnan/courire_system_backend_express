@@ -12,7 +12,7 @@ export const whatsappController = async (req, res) => {
         if (!Array.isArray(whatsappNumbers) || whatsappNumbers.length === 0) {
             return sendResponse(res, 400, true, { general: "No WhatsApp numbers provided." }, null);
           }
-        const customMessage = `🟢 Hello from our backend! Here's a message sent directly via Twilio WhatsApp at ${new Date().toLocaleString()}`;
+        const customMessage = `🟢 Hello from our backend! Here's a message sent directly via  WhatsApp at ${new Date().toLocaleString()}`;
 
         // console.log("marketingImage",marketingImage);
         // console.log("marketingFile",marketingFile);
@@ -40,11 +40,6 @@ export const whatsappController = async (req, res) => {
         // // ✅ Delete temp file
         // fs.unlinkSync(oldPath);
         // Twilio credentials
-        const accountSid = process.env.TWILIO_ACCOUNT_SID;
-        const authToken = process.env.TWILIO_AUTH_TOKEN;
-        
-        
-        const client = twilio(accountSid, authToken);
         // const numbers = [
         //     'whatsapp:+923493445479',
         //     // 'whatsapp:+923004445566'
@@ -53,15 +48,7 @@ export const whatsappController = async (req, res) => {
         // const fileUrl = `${BASE_URL}/uploads/${uploaded.originalname}`;
         // console.log(fileUrl);
         
-        for (const number of whatsappNumbers) {
-            await client.messages.create({
-              from: 'whatsapp:+14155238886',
-              to: `whatsapp:${number}`,
-              body: customMessage,
-            //   mediaUrl: [fileUrl]
-                // mediaUrl:[fileUrl]
-            });
-          }
+        
         
           return sendResponse(res, 200, false, {}, {
             message: "Messages  sent successfully!",
