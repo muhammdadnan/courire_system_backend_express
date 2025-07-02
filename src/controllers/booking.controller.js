@@ -79,7 +79,33 @@ export const addBookingController = async (req, res) => {
             })
         
         await newBooking.save()
-                return sendResponse(res,200,false,{},{message:"Booking Registered Succesfully"})
+        return sendResponse(res, 200, false, {}, {
+            bookingData: {
+                BiltyNo:trackingId, InvoiceNo:invoiceNo,SenderName,
+                ReceiverName,
+                SenderAddressDetail,
+                SenderMobile,
+                SenderCity,
+                SenderOtherDetails,
+                ReceiverAddressDetail,
+                ReceiverMobile,
+                ReceiverCity,
+                ReceiverOtherDetail,
+                NoOfPieces,
+                DetailOfItems,
+                BranchName,
+                UnitRate,
+                TotalWeight,
+                TotalAmount,
+                Customs,
+            Packaging,
+            Shipping,
+            Clearance,
+            OtherCharges,
+            VAT,
+            VAT_Value,
+            TotalInvoiceAmount
+        },message:"Booking Registered Succesfully"})
 
     } catch (error) {
         return sendResponse(res,500,true,{ general: error.message },null)
