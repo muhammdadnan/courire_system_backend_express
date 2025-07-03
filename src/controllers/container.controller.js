@@ -1,5 +1,6 @@
 import {sendResponse} from '../helpers/sendResponse.js'
 import containerModel from '../models/container.model.js'
+
 export const addContainerController = async (req, res) => {
     try {
         const { containerNumber,
@@ -28,3 +29,12 @@ export const addContainerController = async (req, res) => {
          return sendResponse(res,500,true,{ general: error.message },null)
     }
 }
+
+export const getallContainersList = async (req, res) => {
+    try {
+        const containersList = await containerModel.find()
+        return sendResponse(res, 200,false,{}, {containersList,message:"Get all container "});
+    } catch (error) {
+         return sendResponse(res,500,true,{ general: error.message },null)
+    }
+} 
