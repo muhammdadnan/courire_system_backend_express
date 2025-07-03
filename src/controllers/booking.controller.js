@@ -120,3 +120,11 @@ export const getBookingController = async (req, res) => {
          return sendResponse(res,500,true,{ general: error.message },null)
     }
 }
+export const getAllBookingController = async (req, res) => {
+    try {
+        const bookings = await shipmentSchemaModel.find()
+        return sendResponse(res, 200,false,{}, {bookings,message:"Get all booking "});
+    } catch (error) {
+         return sendResponse(res,500,true,{ general: error.message },null)
+    }
+}
