@@ -3,6 +3,7 @@ import express from 'express'
 import BookingRouter from '../src/routers/booking.router.js'
 import ContainerRouter from '../src/routers/container.router.js'
 import WhatsappRouter from '../src/routers/whatsapp.router.js'
+import TrackingRouter from '../src/routers/tracking.router.js'
 import 'dotenv/config'
 import cors from 'cors'
 const app = express()
@@ -17,6 +18,7 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
     console.log('db connected succesfully')
     app.use('/api',BookingRouter)
     app.use('/api',ContainerRouter)
+    app.use('/api',TrackingRouter)
     app.use('/api', WhatsappRouter)
     app.use('/uploads', express.static('uploads'));
 

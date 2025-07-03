@@ -13,7 +13,8 @@ const containerSchema = new mongoose.Schema({
             type: String,
             required: true,
           },
-    },
+  },
+  ContainerShipmentNumber:{type:String,required:true},
     TotalBuilty:{ type: Number, required: true },
 }, {
     timestamps:true

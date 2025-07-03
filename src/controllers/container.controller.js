@@ -6,7 +6,11 @@ export const addContainerController = async (req, res) => {
             supplierName,
             portName,
             fromDestination,
-            toDestination,totalBuilty } = req.body
+            toDestination,
+            totalBuilty,
+            containerShipmentNumber
+        } = req.body
+        console.log(req.body);
         
         const newContainer = new containerModel({
             ContainerNumber:containerNumber,
@@ -15,6 +19,7 @@ export const addContainerController = async (req, res) => {
             Destination: {
                 From:fromDestination,To:toDestination
             },
+            ContainerShipmentNumber:containerShipmentNumber,
             TotalBuilty:totalBuilty
         }) 
         await newContainer.save()

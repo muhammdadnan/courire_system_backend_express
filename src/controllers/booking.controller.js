@@ -112,20 +112,6 @@ export const addBookingController = async (req, res) => {
     }
 }
 
-export const getSingleBooking = async (req, res) => {
-    try {
-        const { trackingId } = req.body
-        const findBooking = await shipmentSchemaModel.findOne({ trackingId })
-        if (!findBooking) {
-              return sendResponse(res, 404, true, { general: "No Booking Found" }, null);
-        }
-        return sendResponse(res, 200,false,{}, {findBooking,message:"Booking Found Successfully"});
-    } catch (error) {
-        return sendResponse(res,500,true,{ general: error.message },null)
-        
-    }
-}
-
 export const getBookingController = async (req, res) => {
     try {
         const bookingInvoices = await shipmentSchemaModel.find({},'InvoiceNo')
