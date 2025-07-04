@@ -3,7 +3,7 @@ import { userController } from '../controllers/user.controller.js'
 import { authenticate_user } from '../middlewares/auth.middleware.js'
 
 
-const router = express.Router()
+const router = express.Router();
 
 router.get('/userInfo',authenticate_user, userController)
 
