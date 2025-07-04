@@ -4,6 +4,8 @@ import BookingRouter from '../src/routers/booking.router.js'
 import ContainerRouter from '../src/routers/container.router.js'
 import WhatsappRouter from '../src/routers/whatsapp.router.js'
 import TrackingRouter from '../src/routers/tracking.router.js'
+import AuthRouter from '../src/routers/auth.router.js'
+import UserRouter from '../src/routers/user.router.js'
 import 'dotenv/config'
 import cors from 'cors'
 const app = express()
@@ -20,8 +22,10 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
     app.use('/api',ContainerRouter)
     app.use('/api',TrackingRouter)
     app.use('/api', WhatsappRouter)
+     app.use('/api/auth',AuthRouter)
+     app.use('/api',UserRouter)
     app.use('/uploads', express.static('uploads'));
-
+    
     app.listen(5000, () => {
         console.log(`Server is running on port ${5000}`);
         
