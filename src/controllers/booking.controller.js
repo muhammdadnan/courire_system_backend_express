@@ -112,7 +112,7 @@ export const addBookingController = async (req, res) => {
     }
 }
 
-export const getBookingController = async (req, res) => {
+export const getBookingInvoicesController = async (req, res) => {
     try {
         const bookingInvoices = await shipmentSchemaModel.find({},'InvoiceNo')
         return sendResponse(res, 200,false,{}, {bookingInvoices,message:"Get all booking Invoices"});
