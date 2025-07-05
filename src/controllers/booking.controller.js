@@ -128,3 +128,28 @@ export const getAllBookingController = async (req, res) => {
          return sendResponse(res,500,true,{ general: error.message },null)
     }
 }
+
+
+export const deleteBookingController = async (req, res) => {
+    try {
+        const { BiltyNo } = req.body
+         // 1. Validate input
+        if (!BiltyNo) {
+            return sendResponse(res, 400, true, { general: "Bilty No is required" }, null);
+        }
+        
+        // 2. Check if Builty exists
+        const builtyRecord = await shipmentSchemaModel.findOne({ BiltyNo });
+
+        if (!builtyRecord) {
+            return sendResponse(res, 409, true, { general: "Builty not found" }, null);
+        }
+         // 3. Delete Builty
+        await builtyRecord.deleteOne();
+        // 4. Success response
+        return sendResponse(res, 200, false, {}, { message: "Builty deleted successfully!" });
+
+    } catch (error) {
+         return sendResponse(res,500,true,{ general: error.message },null)
+    }
+} 
