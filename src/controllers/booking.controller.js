@@ -2,36 +2,39 @@ import {sendResponse} from '../helpers/sendResponse.js'
 import shipmentSchemaModel from '../models/shipmentSchema.model.js'
 export const addBookingController = async (req, res) => {
     try {
+        console.log(req.body);
+        
         const {
-        //     // BiltyNo,
-        //     // InvoiceNo,
             SenderName,
-            ReceiverName,
-            SenderAddressDetail,
             SenderMobile,
-            SenderCity,
-            SenderOtherDetails,
-            ReceiverAddressDetail,
-            ReceiverMobile,
-            ReceiverCity,
-            ReceiverOtherDetail,
+            SenderIdNumber,
+            SenderAddress,
+            SenderArea,
+
+            ReceiverName,
+            ReceiverMobile1,
+            ReceiverMobile2,
+            ReceiverAddress,
+
+            ItemDetails,
+            OtherDetails,
+
             NoOfPieces,
-            DetailOfItems,
-            BranchName,
-            UnitRate,
-            TotalWeight,
-            TotalAmount,
-            Customs,
-            Packaging,
-            Shipping,
-            Clearance,
-            OtherCharges,
-            VAT,
-            VAT_Value,
-            TotalInvoiceAmount
+            Branch,
+            BookingDate,
+
+            Charges,
+            Discount,
+            SubTotal,
+            Vat,
+            VatTotal,
+
+            AmountInWords,
+            InvoiceTotal
+
         } = req.body
-        console.log(TotalWeight);
-        console.log(UnitRate);
+        // console.log(TotalWeight);
+        // console.log(UnitRate);
         
         const trackingId = Math.floor(100000000000 + Math.random() * 900000000000);
 
@@ -53,58 +56,64 @@ export const addBookingController = async (req, res) => {
         }
         const newBooking = new shipmentSchemaModel(
             { BiltyNo:trackingId, InvoiceNo:invoiceNo,SenderName,
-                ReceiverName,
-                SenderAddressDetail,
+                SenderName,
                 SenderMobile,
-                SenderCity,
-                SenderOtherDetails,
-                ReceiverAddressDetail,
-                ReceiverMobile,
-                ReceiverCity,
-                ReceiverOtherDetail,
+                SenderIdNumber,
+                SenderAddress,
+                SenderArea,
+    
+                ReceiverName,
+                 ReceiverMobile1,
+                 ReceiverMobile2,
+                 ReceiverAddress,
+    
+                 ItemDetails,
+                 OtherDetails,
+    
                 NoOfPieces,
-                DetailOfItems,
-                BranchName,
-                UnitRate,
-                TotalWeight,
-                TotalAmount,
-                Customs,
-            Packaging,
-            Shipping,
-            Clearance,
-            OtherCharges,
-            VAT,
-            VAT_Value,
-            TotalInvoiceAmount
+                 Branch,
+                BookingDate,
+    
+                Charges,
+                Discount,
+                SubTotal,
+                 Vat,
+                VatTotal,
+    
+                AmountInWords,
+                InvoiceTotal
             })
         
         await newBooking.save()
         return sendResponse(res, 200, false, {}, {
             bookingData: {
                 BiltyNo:trackingId, InvoiceNo:invoiceNo,SenderName,
-                ReceiverName,
-                SenderAddressDetail,
+                SenderName,
                 SenderMobile,
-                SenderCity,
-                SenderOtherDetails,
-                ReceiverAddressDetail,
-                ReceiverMobile,
-                ReceiverCity,
-                ReceiverOtherDetail,
+                SenderIdNumber,
+                SenderAddress,
+                SenderArea,
+    
+                ReceiverName,
+                ReceiverMobile1,
+                ReceiverMobile2,
+                ReceiverAddress,
+    
+                ItemDetails,
+                OtherDetails,
+    
                 NoOfPieces,
-                DetailOfItems,
-                BranchName,
-                UnitRate,
-                TotalWeight,
-                TotalAmount,
-                Customs,
-            Packaging,
-            Shipping,
-            Clearance,
-            OtherCharges,
-            VAT,
-            VAT_Value,
-            TotalInvoiceAmount
+                Branch,
+                BookingDate,
+    
+                Charges,
+                Discount,
+                SubTotal,
+                Vat,
+                VatTotal,
+    
+                AmountInWords,
+                InvoiceTotal
         },message:"Booking Registered Succesfully"})
 
     } catch (error) {
@@ -115,35 +124,35 @@ export const addBookingController = async (req, res) => {
 export const editBookingController = async (req, res) => {
     try {
         const {
-            BiltyNo,
-            InvoiceNo,
-            SenderName,
-            ReceiverName,
-            SenderAddressDetail,
+            BiltyNo, InvoiceNo,SenderName,
             SenderMobile,
-            SenderCity,
-            SenderOtherDetails,
-            ReceiverAddressDetail,
-            ReceiverMobile,
-            ReceiverCity,
-            ReceiverOtherDetail,
+            SenderIdNumber,
+            SenderAddress,
+            SenderArea,
+
+            ReceiverName,
+            ReceiverMobile1,
+            ReceiverMobile2,
+            ReceiverAddress,
+
+            ItemDetails,
+            OtherDetails,
+
             NoOfPieces,
-            DetailOfItems,
-            BranchName,
-            UnitRate,
-            TotalWeight,
-            TotalAmount,
-            Customs,
-            Packaging,
-            Shipping,
-            Clearance,
-            OtherCharges,
-            VAT,
-            VAT_Value,
-            TotalInvoiceAmount
+            Branch,
+            BookingDate,
+
+            Charges,
+            Discount,
+            SubTotal,
+            Vat,
+            VatTotal,
+
+            AmountInWords,
+            InvoiceTotal
         } = req.body
         
-        console.log(req.body);
+        // console.log(req.body);
         
         const haveTrackingId =await shipmentSchemaModel.findOne({ BiltyNo })
         if (!haveTrackingId) {
@@ -153,56 +162,62 @@ export const editBookingController = async (req, res) => {
         
         await haveTrackingId.updateOne({
             BiltyNo, InvoiceNo,SenderName,
-                ReceiverName,
-                SenderAddressDetail,
+                SenderName,
                 SenderMobile,
-                SenderCity,
-                SenderOtherDetails,
-                ReceiverAddressDetail,
-                ReceiverMobile,
-                ReceiverCity,
-                ReceiverOtherDetail,
+                SenderIdNumber,
+                SenderAddress,
+                SenderArea,
+    
+                ReceiverName,
+                ReceiverMobile1,
+                ReceiverMobile2,
+                ReceiverAddress,
+    
+                ItemDetails,
+                OtherDetails,
+    
                 NoOfPieces,
-                DetailOfItems,
-                BranchName,
-                UnitRate,
-                TotalWeight,
-                TotalAmount,
-                Customs,
-            Packaging,
-            Shipping,
-            Clearance,
-            OtherCharges,
-            VAT,
-            VAT_Value,
-            TotalInvoiceAmount
+                Branch,
+                BookingDate,
+    
+                Charges,
+                Discount,
+                SubTotal,
+                Vat,
+                VatTotal,
+    
+                AmountInWords,
+                InvoiceTotal
         })
         return sendResponse(res, 200, false, {}, {
             bookingData: {
                 BiltyNo, InvoiceNo,SenderName,
-                ReceiverName,
-                SenderAddressDetail,
+                SenderName,
                 SenderMobile,
-                SenderCity,
-                SenderOtherDetails,
-                ReceiverAddressDetail,
-                ReceiverMobile,
-                ReceiverCity,
-                ReceiverOtherDetail,
+                SenderIdNumber,
+                SenderAddress,
+                SenderArea,
+    
+                ReceiverName,
+                ReceiverMobile1,
+                ReceiverMobile2,
+                ReceiverAddress,
+    
+                ItemDetails,
+                OtherDetails,
+    
                 NoOfPieces,
-                DetailOfItems,
-                BranchName,
-                UnitRate,
-                TotalWeight,
-                TotalAmount,
-                Customs,
-            Packaging,
-            Shipping,
-            Clearance,
-            OtherCharges,
-            VAT,
-            VAT_Value,
-            TotalInvoiceAmount
+                Branch,
+                BookingDate,
+    
+                Charges,
+                Discount,
+                SubTotal,
+                Vat,
+                VatTotal,
+    
+                AmountInWords,
+                InvoiceTotal
         },message:"Booking Updated Succesfully"})
 
     } catch (error) {
