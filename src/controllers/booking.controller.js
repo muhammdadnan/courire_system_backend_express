@@ -112,6 +112,104 @@ export const addBookingController = async (req, res) => {
     }
 }
 
+export const editBookingController = async (req, res) => {
+    try {
+        const {
+            BiltyNo,
+            InvoiceNo,
+            SenderName,
+            ReceiverName,
+            SenderAddressDetail,
+            SenderMobile,
+            SenderCity,
+            SenderOtherDetails,
+            ReceiverAddressDetail,
+            ReceiverMobile,
+            ReceiverCity,
+            ReceiverOtherDetail,
+            NoOfPieces,
+            DetailOfItems,
+            BranchName,
+            UnitRate,
+            TotalWeight,
+            TotalAmount,
+            Customs,
+            Packaging,
+            Shipping,
+            Clearance,
+            OtherCharges,
+            VAT,
+            VAT_Value,
+            TotalInvoiceAmount
+        } = req.body
+        
+        console.log(req.body);
+        
+        const haveTrackingId =await shipmentSchemaModel.findOne({ BiltyNo })
+        if (!haveTrackingId) {
+                    return sendResponse(res,409,true,{general:"Tracking Id not found"},null)
+        }
+
+        
+        await haveTrackingId.updateOne({
+            BiltyNo, InvoiceNo,SenderName,
+                ReceiverName,
+                SenderAddressDetail,
+                SenderMobile,
+                SenderCity,
+                SenderOtherDetails,
+                ReceiverAddressDetail,
+                ReceiverMobile,
+                ReceiverCity,
+                ReceiverOtherDetail,
+                NoOfPieces,
+                DetailOfItems,
+                BranchName,
+                UnitRate,
+                TotalWeight,
+                TotalAmount,
+                Customs,
+            Packaging,
+            Shipping,
+            Clearance,
+            OtherCharges,
+            VAT,
+            VAT_Value,
+            TotalInvoiceAmount
+        })
+        return sendResponse(res, 200, false, {}, {
+            bookingData: {
+                BiltyNo, InvoiceNo,SenderName,
+                ReceiverName,
+                SenderAddressDetail,
+                SenderMobile,
+                SenderCity,
+                SenderOtherDetails,
+                ReceiverAddressDetail,
+                ReceiverMobile,
+                ReceiverCity,
+                ReceiverOtherDetail,
+                NoOfPieces,
+                DetailOfItems,
+                BranchName,
+                UnitRate,
+                TotalWeight,
+                TotalAmount,
+                Customs,
+            Packaging,
+            Shipping,
+            Clearance,
+            OtherCharges,
+            VAT,
+            VAT_Value,
+            TotalInvoiceAmount
+        },message:"Booking Updated Succesfully"})
+
+    } catch (error) {
+        return sendResponse(res,500,true,{ general: error.message },null)
+    }
+}
+
 export const getBookingInvoicesController = async (req, res) => {
     try {
         const bookingInvoices = await shipmentSchemaModel.find({},'InvoiceNo')
