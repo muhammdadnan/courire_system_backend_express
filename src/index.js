@@ -6,6 +6,7 @@ import WhatsappRouter from '../src/routers/whatsapp.router.js'
 import TrackingRouter from '../src/routers/tracking.router.js'
 import AuthRouter from '../src/routers/auth.router.js'
 import UserRouter from '../src/routers/user.router.js'
+import CountryRouter from '../src/routers/country.router.js'
 import 'dotenv/config'
 import cors from 'cors'
 const app = express()
@@ -24,6 +25,7 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
     app.use('/api', WhatsappRouter)
      app.use('/api/auth',AuthRouter)
      app.use('/api',UserRouter)
+     app.use('/api',CountryRouter)
     app.use('/uploads', express.static('uploads'));
     
     app.listen(5000, () => {
