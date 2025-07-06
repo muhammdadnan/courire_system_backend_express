@@ -34,4 +34,27 @@ const CityController = async (req, res) => {
     }
 }
 
-export {BranchController,CityController}
+const GetAllBranchController = async (req,res) => {
+    try {
+        const allBranches = await BranchModel.find()
+        
+
+        
+        return sendResponse(res, 200, false, {}, {allBranches,message:"Branch get Succesfully"})
+    } catch (error) {
+        return sendResponse(res, 500, true, { general: error.message }, null);
+    }
+}
+const GetAllCityController = async (req,res) => {
+    try {
+        const allCities = await CityModel.find()
+        
+    
+        
+        return sendResponse(res, 200, false, {}, {allCities,message:"City get Succesfully"})
+    } catch (error) {
+        return sendResponse(res, 500, true, { general: error.message }, null);
+    }
+}
+
+export {BranchController,CityController,GetAllBranchController,GetAllCityController}
