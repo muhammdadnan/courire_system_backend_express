@@ -41,7 +41,7 @@ export const addBookingController = async (req, res) => {
 
         const haveTrackingId =await shipmentSchemaModel.findOne({ trackingId })
         if (haveTrackingId) {
-                    return sendResponse(res,409,true,{general:"Tracking Id already registered"},null)
+                    return sendResponse(res,409,true,{container:"Tracking Id already registered"},null)
         }
 
         const previouInvoiceNo = await shipmentSchemaModel.findOne().sort({ createdAt: -1  })
