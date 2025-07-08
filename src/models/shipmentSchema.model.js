@@ -10,11 +10,19 @@ const shipmentSchema = new mongoose.Schema({
     ReceiverMobile1: { type: String, required: true },
     ReceiverMobile2: { type: String ,required: true},
     ReceiverAddress: { type: String, required: true },
+    ReceiverArea: { type: String, required: true },
 
     ItemDetails: { type: String },
     OtherDetails: { type: String },
 
     NoOfPieces: { type: Number, required: true },
+  RemainingPieces: {
+    type: Number, required: true,
+    default: function () {
+      return this.NoOfPieces;
+    }
+  },
+
     Branch: { type: String, required: true },
     BookingDate: { type: String,required: true }, // format: YYYY-MM-DD
 
@@ -54,12 +62,14 @@ const shipmentSchema = new mongoose.Schema({
             unitRate: { type: Number, default: 0 },
             qty: { type: Number, default: 0 },
             total: { type: Number, default: 0 },
-          }
+          },
+          Discount: {
+            enabled: { type: Boolean, default: false },
+            unitRate: { type: Number, default: 0 },
+            qty: { type: Number, default: 0 },
+            total: { type: Number, default: 0 },
+          },
     },
-    Discount: {
-        enabled: { type: Boolean, default: false },
-        discount: { type: Number, default: 0 }
-      },
     SubTotal: { type: Number },
     Vat: { type: Number },
     VatTotal: { type: Number },
