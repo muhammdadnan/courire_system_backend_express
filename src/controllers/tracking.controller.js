@@ -7,7 +7,13 @@ export const getTrackingController = async (req, res) => {
         if (!foundTrackingId) {
               return sendResponse(res, 404, true, { general: "No tracking Id found" }, null);
         }
-        return sendResponse(res, 200,false,{}, {foundTrackingId,message:"Tracking Id Found Successfully"});
+        let status = "";
+
+        //  If RemainingPieces > 0 → Shipment at Godown
+        if (foundTrackingId.RemainingPieces > 0) {
+          status = "Shipment at Godown";
+        } 
+        return sendResponse(res, 200,false,{}, {foundTrackingId,status,message:"Tracking Id Found Successfully"});
             
     } catch (error) {
         return sendResponse(res, 500, true, { general: error.message }, null);
