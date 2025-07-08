@@ -234,8 +234,8 @@ export const editBookingController = async (req, res) => {
 export const getBookingInvoicesController = async (req, res) => {
     try {
         const bookingInvoices =
-        await shipmentSchemaModel.find({ RemainingPieces:{ $gt: 0 }})
-        console.log(bookingInvoices);
+        await shipmentSchemaModel.find({ RemainingPieces:{ $gt: 0 }}, 'InvoiceNo RemainingPieces' )
+        // console.log(bookingInvoices);
         
         // const checkRemainigInvoices = await shipmentSchemaModel
         return sendResponse(res, 200,false,{}, {bookingInvoices,message:"Get all booking Invoices"});
