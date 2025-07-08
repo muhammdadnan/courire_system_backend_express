@@ -15,6 +15,7 @@ export const addBookingController = async (req, res) => {
             ReceiverMobile1,
             ReceiverMobile2,
             ReceiverAddress,
+            ReceiverArea,
 
             ItemDetails,
             OtherDetails,
@@ -65,7 +66,8 @@ export const addBookingController = async (req, res) => {
                 ReceiverName,
                  ReceiverMobile1,
                  ReceiverMobile2,
-                 ReceiverAddress,
+                ReceiverAddress,
+                ReceiverArea,
     
                  ItemDetails,
                  OtherDetails,
@@ -98,7 +100,8 @@ export const addBookingController = async (req, res) => {
                 ReceiverMobile1,
                 ReceiverMobile2,
                 ReceiverAddress,
-    
+                ReceiverArea,
+                
                 ItemDetails,
                 OtherDetails,
     
@@ -134,6 +137,7 @@ export const editBookingController = async (req, res) => {
             ReceiverMobile1,
             ReceiverMobile2,
             ReceiverAddress,
+            ReceiverArea,
 
             ItemDetails,
             OtherDetails,
@@ -172,7 +176,8 @@ export const editBookingController = async (req, res) => {
                 ReceiverMobile1,
                 ReceiverMobile2,
                 ReceiverAddress,
-    
+                ReceiverArea, 
+
                 ItemDetails,
                 OtherDetails,
     
@@ -202,6 +207,7 @@ export const editBookingController = async (req, res) => {
                 ReceiverMobile1,
                 ReceiverMobile2,
                 ReceiverAddress,
+                ReceiverArea,
     
                 ItemDetails,
                 OtherDetails,
@@ -227,7 +233,11 @@ export const editBookingController = async (req, res) => {
 
 export const getBookingInvoicesController = async (req, res) => {
     try {
-        const bookingInvoices = await shipmentSchemaModel.find({},'InvoiceNo')
+        const bookingInvoices =
+        await shipmentSchemaModel.find({ RemainingPieces:{ $gt: 0 }})
+        console.log(bookingInvoices);
+        
+        // const checkRemainigInvoices = await shipmentSchemaModel
         return sendResponse(res, 200,false,{}, {bookingInvoices,message:"Get all booking Invoices"});
     } catch (error) {
          return sendResponse(res,500,true,{ general: error.message },null)
