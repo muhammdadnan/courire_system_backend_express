@@ -2,8 +2,6 @@ import mongoose from 'mongoose'
 
 const containerSchema = new mongoose.Schema({
     ContainerNumber: { type: String, required: true },
-    SupplierName: { type: String, required: true },
-    PortName: { type: String, required: true },
     Destination: {
         From: {
             type: String,
@@ -14,8 +12,8 @@ const containerSchema = new mongoose.Schema({
             required: true,
           },
   },
-  ContainerShipmentNumber:{type:String,required:true},
-    TotalBuilty:{ type: Number, required: true },
+  Invoices: { type: [String], required: true },
+    Status:{type:String,required:true}
 }, {
     timestamps:true
 })
