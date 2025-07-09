@@ -3,6 +3,7 @@ import containerModel from '../models/container.model.js'
 import shipmentSchemaModel from '../models/shipmentSchema.model.js';
 import containerNumberModel from '../models/containerNumber.model.js';
 import mongoose from 'mongoose'
+
 export const addContainerController = async (req, res) => {
     try {
         const {
@@ -43,13 +44,18 @@ export const addContainerController = async (req, res) => {
 
     toShip -= shipQty;
             }
-          }
-        // ✅ Update containerNumberModel to assign invoices
-        await containerNumberModel.updateOne(
-                { ContainerNumber: containerNumber },
-                { $set: { Invoices: invoices } }
-                    );
-                    
+      }
+      console.log(invoices);
+      
+         // ✅ Step 2: Check if containerNumberModel exists & Invoices is empty
+    const containerRecord = await containerNumberModel.findOne({ ContainerNumber: containerNumber });
+    
+    if (containerRecord && (!containerRecord.Invoices || containerRecord.Invoices.length === 0)) {
+      // Assign new invoices
+      containerRecord.Invoices = invoices;
+      await containerRecord.save();
+    }
+            
         const newContainer = new containerModel({
             ContainerNumber: containerNumber,
             Destination: {
