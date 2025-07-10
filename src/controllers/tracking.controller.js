@@ -7,7 +7,7 @@ export const getTrackingController = async (req, res) => {
     const foundTrackingId = await shipmentSchema.findOne({ BiltyNo: trackingId });
 
     if (!foundTrackingId) {
-      return sendResponse(res, 404, true, { general: "No tracking Id found" }, null);
+      return sendResponse(res, 404, true, { trackingId: "No tracking Id found" }, null);
     }
 
     const invoiceNo = foundTrackingId.InvoiceNo; // e.g., '101/10'
