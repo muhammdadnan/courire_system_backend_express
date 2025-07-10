@@ -1,5 +1,6 @@
 import {sendResponse} from '../helpers/sendResponse.js'
 import shipmentSchemaModel from '../models/shipmentSchema.model.js'
+import mongoose from 'mongoose'
 export const addBookingController = async (req, res) => {
     try {
         console.log(req.body);
@@ -126,111 +127,54 @@ export const addBookingController = async (req, res) => {
 
 export const editBookingController = async (req, res) => {
     try {
-        const {
-            BiltyNo, InvoiceNo,SenderName,
-            SenderMobile,
-            SenderIdNumber,
-            SenderAddress,
-            SenderArea,
-
-            ReceiverName,
-            ReceiverMobile1,
-            ReceiverMobile2,
-            ReceiverAddress,
-            ReceiverArea,
-
-            ItemDetails,
-            OtherDetails,
-
-            NoOfPieces,
-            Branch,
-            BookingDate,
-
-            Charges,
-            Discount,
-            SubTotal,
-            Vat,
-            VatTotal,
-
-            AmountInWords,
-            InvoiceTotal
-        } = req.body
-        
-        // console.log(req.body);
-        
-        const haveTrackingId =await shipmentSchemaModel.findOne({ BiltyNo })
-        if (!haveTrackingId) {
-                    return sendResponse(res,409,true,{general:"Tracking Id not found"},null)
+      const { id } = req.params;
+  
+      const {
+        BiltyNo, InvoiceNo, SenderName, SenderMobile, SenderIdNumber, SenderAddress, SenderArea,
+        ReceiverName, ReceiverMobile1, ReceiverMobile2, ReceiverAddress, ReceiverArea,
+        ItemDetails, OtherDetails,
+        NoOfPieces, Branch, BookingDate,
+        Charges, Discount, SubTotal, Vat, VatTotal,
+        AmountInWords, InvoiceTotal
+      } = req.body;
+  
+      const updateData = {
+        BiltyNo, InvoiceNo, SenderName, SenderMobile, SenderIdNumber, SenderAddress, SenderArea,
+        ReceiverName, ReceiverMobile1, ReceiverMobile2, ReceiverAddress, ReceiverArea,
+        ItemDetails, OtherDetails,
+        NoOfPieces, Branch, BookingDate,
+        Charges, Discount, SubTotal, Vat, VatTotal,
+        AmountInWords, InvoiceTotal
+      };
+  
+      let bookingDoc;
+  
+      if (id) {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          return sendResponse(res, 400, true, { general: "Invalid ID" }, null);
         }
-
-        
-        await haveTrackingId.updateOne({
-            BiltyNo, InvoiceNo,SenderName,
-                SenderName,
-                SenderMobile,
-                SenderIdNumber,
-                SenderAddress,
-                SenderArea,
-    
-                ReceiverName,
-                ReceiverMobile1,
-                ReceiverMobile2,
-                ReceiverAddress,
-                ReceiverArea, 
-
-                ItemDetails,
-                OtherDetails,
-    
-                NoOfPieces,
-                Branch,
-                BookingDate,
-    
-                Charges,
-                Discount,
-                SubTotal,
-                Vat,
-                VatTotal,
-    
-                AmountInWords,
-                InvoiceTotal
-        })
-        return sendResponse(res, 200, false, {}, {
-            bookingData: {
-                BiltyNo, InvoiceNo,SenderName,
-                SenderName,
-                SenderMobile,
-                SenderIdNumber,
-                SenderAddress,
-                SenderArea,
-    
-                ReceiverName,
-                ReceiverMobile1,
-                ReceiverMobile2,
-                ReceiverAddress,
-                ReceiverArea,
-    
-                ItemDetails,
-                OtherDetails,
-    
-                NoOfPieces,
-                Branch,
-                BookingDate,
-    
-                Charges,
-                Discount,
-                SubTotal,
-                Vat,
-                VatTotal,
-    
-                AmountInWords,
-                InvoiceTotal
-        },message:"Booking Updated Succesfully"})
-
+  
+        bookingDoc = await shipmentSchemaModel.findById(id);
+      } else {
+        bookingDoc = await shipmentSchemaModel.findOne({ BiltyNo });
+      }
+  
+      if (!bookingDoc) {
+        return sendResponse(res, 409, true, { general: "Booking not found" }, null);
+      }
+  
+      await bookingDoc.updateOne(updateData);
+  
+      return sendResponse(res, 200, false, {}, {
+        bookingData: updateData,
+        message: "Booking Updated Successfully"
+      });
+  
     } catch (error) {
-        return sendResponse(res,500,true,{ general: error.message },null)
+      return sendResponse(res, 500, true, { general: error.message }, null);
     }
-}
-
+  };
+  
 export const getBookingInvoicesController = async (req, res) => {
     try {
         const bookingInvoices =
@@ -253,6 +197,27 @@ export const getAllBookingController = async (req, res) => {
 }
 
 
+
+export const getBookingSingleController = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return sendResponse(res, 400, true, { general: "Invalid ID" }, null);
+          }
+        
+        // 2. Check if Builty exists
+        const builtyRecord = await shipmentSchemaModel.findById(id)
+
+        if (!builtyRecord) {
+            return sendResponse(res, 409, true, { general: "Booking not found" }, null);
+        }
+        // 4. Success response
+        return sendResponse(res, 200, false, {}, { builtyRecord,message: "Builty fetch successfully!" });
+
+    } catch (error) {
+         return sendResponse(res,500,true,{ general: error.message },null)
+    }
+} 
 export const deleteBookingController = async (req, res) => {
     try {
         const { BiltyNo } = req.body
