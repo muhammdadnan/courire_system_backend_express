@@ -80,6 +80,131 @@ export const addContainerController = async (req, res) => {
          return sendResponse(res,500,true,{ general: error.message },null)
     }
 }
+export const updateSingleContainer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return sendResponse(res, 400, true, { general: "Invalid Container ID" }, null);
+    }
+
+    const {
+      containerNumber,
+      fromDestination,
+      toDestination,
+      invoices,
+      status,
+      previousInvoices,
+    } = req.body;
+
+    if (
+      !containerNumber || !fromDestination || !toDestination ||
+      !Array.isArray(invoices) || invoices.length === 0 ||
+      !status || !Array.isArray(previousInvoices) || previousInvoices.length === 0
+    ) {
+      return sendResponse(res, 400, true, { general: 'Missing required fields' }, null);
+    }
+
+    // Parse invoice strings like "INV001/10" into map { INV001: 10 }
+    const parseInvoices = (arr) => {
+      const map = {};
+      for (const inv of arr) {
+        const [invNo, qtyStr] = inv.split('/');
+        const qty = parseInt(qtyStr);
+        if (invNo && !isNaN(qty)) {
+          map[invNo] = qty;
+        }
+      }
+      return map;
+    };
+
+    const newInvoiceMap = parseInvoices(invoices);
+    const previousInvoiceMap = parseInvoices(previousInvoices);
+
+    for (const invNo of Object.keys(newInvoiceMap)) {
+      const newQty = newInvoiceMap[invNo];
+      const oldQty = previousInvoiceMap[invNo] || 0;
+      const diff = newQty - oldQty;
+
+      if (diff === 0) continue;
+
+      const shipments = await shipmentSchemaModel.find({
+        InvoiceNo: { $regex: `^${invNo}/` },
+      });
+
+      let remainingDiff = Math.abs(diff);
+
+      for (const s of shipments) {
+        if (remainingDiff <= 0) break;
+
+        const totalPieces = s.Pieces ?? s.NoOfPieces ?? 0;
+
+        // Fallback if RemainingPieces is invalid or missing
+        if (s.RemainingPieces === undefined || isNaN(s.RemainingPieces)) {
+          s.RemainingPieces = totalPieces;
+        }
+        
+
+        if (diff > 0) {
+          // Pieces increased in this container → reduce from shipment
+          const reduceQty = Math.min(s.RemainingPieces, remainingDiff);
+          s.RemainingPieces -= reduceQty;
+          remainingDiff -= reduceQty;
+        } else {
+          // Pieces reduced in this container → add back to shipment
+          const canAddBack = totalPieces - s.RemainingPieces;
+          const addBackQty = Math.min(canAddBack, remainingDiff);
+          s.RemainingPieces += addBackQty;
+          remainingDiff -= addBackQty;
+        }
+
+        await s.save();
+      }
+    }
+
+    // Sync containerNumberModel if previousInvoices match
+    const containerRecord = await containerNumberModel.findOne({ ContainerNumber: containerNumber });
+
+    if (containerRecord) {
+      const existingInvoices = containerRecord.Invoices || [];
+      const isMatching =
+        Array.isArray(previousInvoices) &&
+        previousInvoices.length === existingInvoices.length &&
+        previousInvoices.every((inv, idx) => inv === existingInvoices[idx]);
+
+      if (isMatching) {
+        containerRecord.Invoices = invoices;
+        await containerRecord.save();
+        console.log('Invoices updated in containerNumberModel due to matching previousInvoices');
+      }
+    }
+
+    const updatedContainer = await containerModel.findByIdAndUpdate(
+      id,
+      {
+        ContainerNumber: containerNumber,
+        Destination: {
+          From: fromDestination,
+          To: toDestination,
+        },
+        Invoices: invoices,
+        Status: status,
+      },
+      { new: true }
+    );
+
+    return sendResponse(res, 200, false, {}, {
+      updatedContainer,
+      message: 'Container updated successfully',
+    });
+
+  } catch (error) {
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
+
+
+
 
 export const getallContainersList = async (req, res) => {
     try {
