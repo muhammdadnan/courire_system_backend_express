@@ -106,7 +106,7 @@ export const getSinglelContainer = async (req, res) => {
          return sendResponse(res,500,true,{ general: error.message },null)
     }
 } 
-export const updateSinglelContainer = async (req, res) => {
+export const updateSinglelContainerStatus = async (req, res) => {
   try {
     const { id } = req.params;
 
