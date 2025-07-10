@@ -1,6 +1,9 @@
 import {sendResponse} from '../helpers/sendResponse.js'
 import shipmentSchemaModel from '../models/shipmentSchema.model.js'
+import containerModel from '../models/container.model.js'
+import containerNumberModel from '../models/containerNumber.model.js'
 import mongoose from 'mongoose'
+
 export const addBookingController = async (req, res) => {
     try {
         console.log(req.body);
@@ -219,25 +222,48 @@ export const getBookingSingleController = async (req, res) => {
     }
 } 
 export const deleteBookingController = async (req, res) => {
-    try {
-        const { BiltyNo } = req.body
-         // 1. Validate input
-        if (!BiltyNo) {
-            return sendResponse(res, 400, true, { general: "Bilty No is required" }, null);
-        }
-        
-        // 2. Check if Builty exists
-        const builtyRecord = await shipmentSchemaModel.findOne({ BiltyNo });
+  try {
+    const { BiltyNo } = req.body;
 
-        if (!builtyRecord) {
-            return sendResponse(res, 409, true, { general: "Builty not found" }, null);
-        }
-         // 3. Delete Builty
-        await builtyRecord.deleteOne();
-        // 4. Success response
-        return sendResponse(res, 200, false, {}, { message: "Builty deleted successfully!" });
-
-    } catch (error) {
-         return sendResponse(res,500,true,{ general: error.message },null)
+    // 1. Validate input
+    if (!BiltyNo) {
+      return sendResponse(res, 400, true, { general: "Bilty No is required" }, null);
     }
-} 
+
+    // 2. Find the shipment
+    const builtyRecord = await shipmentSchemaModel.findOne({ BiltyNo });
+
+    if (!builtyRecord) {
+      return sendResponse(res, 409, true, { general: "Builty not found" }, null);
+    }
+
+    const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
+    const invoiceNo = fullInvoice?.split('/')?.[0];   // e.g. "INV001"
+
+    if (!invoiceNo) {
+      return sendResponse(res, 400, true, { general: "Invalid Invoice Number format" }, null);
+    }
+
+    // 3. Remove invoice from containerModel
+    await containerModel.updateMany(
+      { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+      { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+    );
+
+    // 4. Remove invoice from containerNumberModel
+    await containerNumberModel.updateMany(
+      { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+      { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+    );
+
+    // 5. Delete the shipment itself
+    await builtyRecord.deleteOne();
+
+    return sendResponse(res, 200, false, {}, {
+      message: "Builty deleted successfully and removed from all containers.",
+    });
+
+  } catch (error) {
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
