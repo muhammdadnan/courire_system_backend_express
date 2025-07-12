@@ -260,4 +260,101 @@ const updatedContainer = await containerModel.findByIdAndUpdate(
     return sendResponse(res, 500, true, { general: error.message }, null);
   }
 };
+export const updateBulkContainerStatus = async (req, res) => {
+  try {
+    const { containers } = req.body;
+    // console.log(containers);
+    
+    if (!Array.isArray(containers) || containers.length === 0) {
+      return sendResponse(res, 400, true, { general: "No containers provided" }, null);
+    }
+
+    const results = [];
+
+    for (const container of containers) {
+      const { id, status } = container;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        results.push({ id, success: false, error: "Invalid ID" });
+        continue;
+      }
+
+      const updated = await containerModel.findByIdAndUpdate(
+        id,
+        { $set: { Status: status } },
+        { new: true }
+      );
+
+      if (updated) {
+        results.push({ id, success: true });
+      } else {
+        results.push({ id, success: false, error: "Not found" });
+      }
+    }
+
+    return sendResponse(res, 200, false, {}, {
+      message: "Bulk update completed",
+      results
+    });
+
+  } catch (error) {
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
+
+
+
+export const deleteSingleContainer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return sendResponse(res, 400, true, { general: "Invalid Container ID" }, null);
+    }
+
+    const container = await containerModel.findById(id);
+    if (!container) {
+      return sendResponse(res, 404, true, { general: "Container not found" }, null);
+    }
+
+    // ✅ Only allow delete if status is "Shipment In Container"
+    if (container.Status !== "Shipment In Container") {
+      return sendResponse(res, 400, true, { general: `This container is no more deletable, Status :${container.Status}` }, null);
+    }
+
+    // ✅ Reset invoices in containerNumberModel
+    await containerNumberModel.findOneAndUpdate(
+      { ContainerNumber: container.ContainerNumber },
+      { $set: { Invoices: null } }
+    );
+
+    // ✅ For each invoice, find all shipments with InvoiceNo like "123", "123/1", "123/2", etc.
+    for (const fullInvoice of container.Invoices) {
+      const baseInvoice = fullInvoice.split("/")[0];
+
+      const matchingShipments = await shipmentSchemaModel.find({
+        InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` }
+      });
+
+      for (const shipment of matchingShipments) {
+        shipment.RemainingPieces = shipment.NoOfPieces;
+        await shipment.save();
+      }
+    }
+
+    // ✅ Finally delete the container
+    await containerModel.findByIdAndDelete(id);
+
+    return sendResponse(res, 200, false, {}, {
+      message: "Container deleted, invoices reset, and remaining pieces updated successfully."
+    });
+
+  } catch (error) {
+    console.error("Error deleting container:", error);
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
+
+
+
  
