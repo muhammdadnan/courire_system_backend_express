@@ -190,14 +190,42 @@ export const getBookingInvoicesController = async (req, res) => {
          return sendResponse(res,500,true,{ general: error.message },null)
     }
 }
+
 export const getAllBookingController = async (req, res) => {
-    try {
-        const bookings = await shipmentSchemaModel.find()
-        return sendResponse(res, 200,false,{}, {bookings,message:"Get all booking "});
-    } catch (error) {
-         return sendResponse(res,500,true,{ general: error.message },null)
-    }
-}
+  try {
+    const bookings = await shipmentSchemaModel.find();
+
+    const enrichedBookings = await Promise.all(
+      bookings.map(async (booking) => {
+        // Match container records where any invoice starts with booking.InvoiceNo/
+         const [invNo, shippedStr] = booking.InvoiceNo.split("/");
+        const containers = await containerModel.find({
+          Invoices: { $elemMatch: { $regex: `^${invNo}/` } }
+        });
+        
+        const statusArray = containers.map((c) => c.Status).filter(Boolean);
+        const uniqueStatuses = statusArray.join(', ') || "Not In Container";
+        
+        console.log(containers)
+        return {
+          ...booking._doc,
+          status: uniqueStatuses,  // could be [] if not in container
+        };
+      })
+    );
+
+    return sendResponse(
+      res,
+      200,
+      false,
+      {},
+      { bookings: enrichedBookings, message: "Get all bookings" }
+    );
+  } catch (error) {
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
+
 
 
 
@@ -234,36 +262,43 @@ export const deleteBookingController = async (req, res) => {
     const builtyRecord = await shipmentSchemaModel.findOne({ BiltyNo });
 
     if (!builtyRecord) {
-      return sendResponse(res, 409, true, { general: "Builty not found" }, null);
+      return sendResponse(res, 409, true, { general: "Bilty not found" }, null);
     }
 
-    const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
-    const invoiceNo = fullInvoice?.split('/')?.[0];   // e.g. "INV001"
-
-    if (!invoiceNo) {
-      return sendResponse(res, 400, true, { general: "Invalid Invoice Number format" }, null);
+    // 2.1 Check if this bilty has been partially shipped
+    if (builtyRecord.Pieces !== builtyRecord.RemainingPieces) {
+      return sendResponse(res, 400, true, { general: "This booking is already added to a container and cannot be deleted." }, null);
     }
 
-    // 3. Remove invoice from containerModel
-    await containerModel.updateMany(
-      { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
-      { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
-    );
+    // // 3. Extract invoice number
+    // const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
+    // const invoiceNo = fullInvoice?.split('/')?.[0];   // e.g. "INV001"
 
-    // 4. Remove invoice from containerNumberModel
-    await containerNumberModel.updateMany(
-      { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
-      { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
-    );
+    // if (!invoiceNo) {
+    //   return sendResponse(res, 400, true, { general: "Invalid Invoice Number format" }, null);
+    // }
 
-    // 5. Delete the shipment itself
+    // // 4. Remove invoice from containerModel
+    // await containerModel.updateMany(
+    //   { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+    //   { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+    // );
+
+    // // 5. Remove invoice from containerNumberModel
+    // await containerNumberModel.updateMany(
+    //   { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+    //   { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+    // );
+
+    // 6. Delete the shipment itself
     await builtyRecord.deleteOne();
 
     return sendResponse(res, 200, false, {}, {
-      message: "Builty deleted successfully and removed from all containers.",
+      message: "Bilty deleted successfully and removed from all containers.",
     });
 
   } catch (error) {
     return sendResponse(res, 500, true, { general: error.message }, null);
   }
 };
+
