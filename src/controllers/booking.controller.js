@@ -197,19 +197,27 @@ export const getAllBookingController = async (req, res) => {
 
     const enrichedBookings = await Promise.all(
       bookings.map(async (booking) => {
-        // Match container records where any invoice starts with booking.InvoiceNo/
-         const [invNo, shippedStr] = booking.InvoiceNo.split("/");
-        const containers = await containerModel.find({
-          Invoices: { $elemMatch: { $regex: `^${invNo}/` } }
-        });
-        
-        const statusArray = containers.map((c) => c.Status).filter(Boolean);
-        const uniqueStatuses = statusArray.join(', ') || "Not In Container";
-        
-        console.log(containers)
+        let status = "Not In Container";
+
+        const invoice = booking?.InvoiceNo;
+        const [invNo] = invoice?.split("/") || [];
+
+        if (invNo) {
+          const containers = await containerModel.find({
+            Invoices: { $elemMatch: { $regex: `^${invNo}/` } }
+          });
+
+          const statusArray = containers.map((c) => c.Status).filter(Boolean);
+          const uniqueStatuses = [...new Set(statusArray)];
+
+          if (uniqueStatuses.length > 0) {
+            status = uniqueStatuses.join(", ");
+          }
+        }
+
         return {
           ...booking._doc,
-          status: uniqueStatuses,  // could be [] if not in container
+          status,
         };
       })
     );
@@ -229,26 +237,57 @@ export const getAllBookingController = async (req, res) => {
 
 
 
+
 export const getBookingSingleController = async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return sendResponse(res, 400, true, { general: "Invalid ID" }, null);
-          }
-        
-        // 2. Check if Builty exists
-        const builtyRecord = await shipmentSchemaModel.findById(id)
+  try {
+    const { id } = req.params;
 
-        if (!builtyRecord) {
-            return sendResponse(res, 409, true, { general: "Booking not found" }, null);
-        }
-        // 4. Success response
-        return sendResponse(res, 200, false, {}, { builtyRecord,message: "Builty fetch successfully!" });
-
-    } catch (error) {
-         return sendResponse(res,500,true,{ general: error.message },null)
+    // 1. Validate ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendResponse(res, 400, true, { general: "Invalid ID" }, null);
     }
-} 
+
+    // 2. Find booking
+    const builtyRecord = await shipmentSchemaModel.findById(id);
+
+    if (!builtyRecord) {
+      return sendResponse(res, 409, true, { general: "Booking not found" }, null);
+    }
+
+    // 3. Extract invoiceNo (e.g. "INV123" from "INV123/2")
+    const [invoiceNo] = builtyRecord.InvoiceNo?.split("/") || [];
+
+    let status = "Shipment in Godown"; // default
+
+    if (invoiceNo) {
+      // 4. Find containers that include this invoice
+      const containers = await containerModel.find({
+        Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } }
+      });
+
+      // 5. Extract and deduplicate statuses
+      const statusArray = containers.map((c) => c.Status).filter(Boolean);
+      const uniqueStatuses = [...new Set(statusArray)];
+
+      if (uniqueStatuses.length > 0) {
+        status = uniqueStatuses.join(", ");
+      }
+    }
+
+    // 6. Return enriched result
+    return sendResponse(res, 200, false, {}, {
+      builtyRecord: {
+        ...builtyRecord._doc,
+        status,
+      },
+      message: "Builty fetched successfully!",
+    });
+
+  } catch (error) {
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
+ 
 export const deleteBookingController = async (req, res) => {
   try {
     const { BiltyNo } = req.body;
