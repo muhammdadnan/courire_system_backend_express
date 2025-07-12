@@ -305,8 +305,11 @@ export const deleteBookingController = async (req, res) => {
     }
 
     // 2.1 Check if this bilty has been partially shipped
+    // if (builtyRecord.Pieces !== builtyRecord.RemainingPieces) {
+    //   return sendResponse(res, 400, true, { general: `"This booking is already added to a container and cannot be deleted."` }, null);
+    // }
     if (builtyRecord.Pieces !== builtyRecord.RemainingPieces) {
-      return sendResponse(res, 400, true, { general: "This booking is already added to a container and cannot be deleted." }, null);
+      return sendResponse(res, 400, true, { general: `This Booking is no more deletable, Status : Shipment in Container` }, null);
     }
 
     // // 3. Extract invoice number
