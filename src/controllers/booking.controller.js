@@ -308,8 +308,11 @@ export const deleteBookingController = async (req, res) => {
     // if (builtyRecord.Pieces !== builtyRecord.RemainingPieces) {
     //   return sendResponse(res, 400, true, { general: `"This booking is already added to a container and cannot be deleted."` }, null);
     // }
-    if (builtyRecord.Pieces !== builtyRecord.RemainingPieces) {
-      return sendResponse(res, 400, true, { general: `This Booking is no more deletable, Status : Shipment in Container` }, null);
+    // console.log(builtyRecord.NoOfPieces);
+    // console.log( builtyRecord.RemainingPieces);
+    
+    if (builtyRecord.NoOfPieces !== builtyRecord.RemainingPieces) {
+      return sendResponse(res, 400, true, { general: `This Booking is no more deletable already in process` }, null);
     }
 
     // // 3. Extract invoice number
