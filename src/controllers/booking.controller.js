@@ -197,7 +197,7 @@ export const getAllBookingController = async (req, res) => {
 
     const enrichedBookings = await Promise.all(
       bookings.map(async (booking) => {
-        let status = "Not In Container";
+        let status = "Shipment in Godown";
 
         const invoice = booking?.InvoiceNo;
         const [invNo] = invoice?.split("/") || [];
