@@ -257,11 +257,10 @@ export const updateSinglelContainerStatus = async (req, res) => {
     }
 
     // ✅ If status is Delivered, set Invoices to null in containerNumberModel
-    if (Status === 'Delivered') {
-      await containerNumberModel.findOneAndUpdate(
-        { ContainerNumber: updatedContainer.ContainerNumber },
-        { $set: { Invoices: null } }
-      );
+    if (Status.toLowerCase() === 'delivered') {
+       await containerNumberModel.findOneAndDelete({
+        ContainerNumber: updatedContainer.ContainerNumber
+      });
     }
 
     return sendResponse(res, 200, false, {}, {
@@ -299,6 +298,12 @@ export const updateBulkContainerStatus = async (req, res) => {
       );
 
       if (updated) {
+         // ✅ Delete from containerNumberModel if status is 'delivered'
+        if (status.toLowerCase() === 'delivered') {
+          await containerNumberModel.findOneAndDelete({
+            ContainerNumber: updated.ContainerNumber
+          });
+        }
         results.push({ id, success: true });
       } else {
         results.push({ id, success: false, error: "Not found" });
