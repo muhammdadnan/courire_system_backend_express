@@ -8,11 +8,16 @@ export const addContainerNumberController = async (req, res) => {
             From,
             To
         } = req.body
-        console.log(req.body);
+        // console.log(req.body);
         if (!ContainerNumber || !From || !To) {
             return sendResponse(res, 400, true, {general:"All Fields are required of Container Number Section"}, null)
         }
-        const haveContainerNumber =await containerNumberModel.findOne({ ContainerNumber })
+        // const haveContainerNumber =await containerNumberModel.findOne({ ContainerNumber })
+        
+        const haveContainerNumber = await containerNumberModel.findOne({
+        ContainerNumber: { $regex: `^${ContainerNumber}$`, $options: "i" }
+        });
+
         if (haveContainerNumber) {
                     return sendResponse(res,409,true,{container:"Container Number already added"},null)
         }
