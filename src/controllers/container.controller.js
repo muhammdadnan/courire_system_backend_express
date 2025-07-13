@@ -317,6 +317,70 @@ export const updateBulkContainerStatus = async (req, res) => {
 
 
 
+// export const deleteSingleContainer = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+//       return sendResponse(res, 400, true, { general: "Invalid Container ID" }, null);
+//     }
+
+//     const container = await containerModel.findById(id);
+//     if (!container) {
+//       return sendResponse(res, 404, true, { general: "Container not found" }, null);
+//     }
+
+//     // // ✅ Only allow delete if status is "Shipment In Container"
+//     // if (container.Status !== "Shipment In Container") {
+//     //   return sendResponse(res, 400, true, { general: `This container is no more deletable, Status :${container.Status}` }, null);
+//     // }
+//     // ✅ Allow delete only if status is "Shipment In Container" or "Delivered" (case-insensitive)
+//     const statusLower = container.Status?.toLowerCase();
+//     if (statusLower !== "shipment in container" && statusLower !== "delivered") {
+//       return sendResponse(res, 400, true, {
+//         general: `This container is not deletable. Current Status: ${container.Status}`
+//       }, null);
+//     }
+
+//     // // ✅ Reset invoices in containerNumberModel
+//     // await containerNumberModel.findOneAndUpdate(
+//     //   { ContainerNumber: container.ContainerNumber },
+//     //   { $set: { Invoices: null } }
+//     // );
+
+//      // ✅ Delete corresponding containerNumberModel
+//     await containerNumberModel.findOneAndDelete({
+//       ContainerNumber: container.ContainerNumber
+//     });
+
+
+//     // ✅ For each invoice, find all shipments with InvoiceNo like "123", "123/1", "123/2", etc.
+//     for (const fullInvoice of container.Invoices) {
+//       const baseInvoice = fullInvoice.split("/")[0];
+
+//       const matchingShipments = await shipmentSchemaModel.find({
+//         InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` }
+//       });
+
+//       for (const shipment of matchingShipments) {
+//         shipment.RemainingPieces = shipment.NoOfPieces;
+//         await shipment.save();
+//       }
+//     }
+
+//     // ✅ Finally delete the container
+//     await containerModel.findByIdAndDelete(id);
+
+//     return sendResponse(res, 200, false, {}, {
+//       message: "Container deleted, invoices reset, and remaining pieces updated successfully."
+//     });
+
+//   } catch (error) {
+//     console.error("Error deleting container:", error);
+//     return sendResponse(res, 500, true, { general: error.message }, null);
+//   }
+// };
+
 export const deleteSingleContainer = async (req, res) => {
   try {
     const { id } = req.params;
@@ -330,43 +394,58 @@ export const deleteSingleContainer = async (req, res) => {
       return sendResponse(res, 404, true, { general: "Container not found" }, null);
     }
 
-    // ✅ Only allow delete if status is "Shipment In Container"
-    if (container.Status !== "Shipment In Container") {
-      return sendResponse(res, 400, true, { general: `This container is no more deletable, Status :${container.Status}` }, null);
+    const statusLower = container.Status.toLowerCase();
+
+    // ✅ Only allow deletion if status is either "shipment in container" or "delivered"
+    if (
+      statusLower !== "shipment in container" &&
+      statusLower !== "delivered"
+    ) {
+      return sendResponse(res, 400, true, {
+        general: `Container cannot be deleted. Status: ${container.Status}`,
+      }, null);
     }
 
-    // ✅ Reset invoices in containerNumberModel
-    await containerNumberModel.findOneAndUpdate(
-      { ContainerNumber: container.ContainerNumber },
-      { $set: { Invoices: null } }
-    );
+    // ✅ If container is not delivered, we need to return pieces to shipments
+    if (statusLower === "shipment in container") {
+      for (const fullInvoice of container.Invoices) {
+        const baseInvoice = fullInvoice.split("/")[0];
+        const containerInvoiceQty = parseInt(fullInvoice.split("/")[1] || "0");
 
-    // ✅ For each invoice, find all shipments with InvoiceNo like "123", "123/1", "123/2", etc.
-    for (const fullInvoice of container.Invoices) {
-      const baseInvoice = fullInvoice.split("/")[0];
+        const matchingShipments = await shipmentSchemaModel.find({
+          InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` },
+        });
 
-      const matchingShipments = await shipmentSchemaModel.find({
-        InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` }
-      });
+        for (const shipment of matchingShipments) {
+          const totalPieces = shipment.NoOfPieces || 0;
+          const currentRemaining = shipment.RemainingPieces || 0;
+          const addBackQty = Math.min(containerInvoiceQty, totalPieces - currentRemaining);
 
-      for (const shipment of matchingShipments) {
-        shipment.RemainingPieces = shipment.NoOfPieces;
-        await shipment.save();
+          shipment.RemainingPieces += addBackQty;
+          await shipment.save();
+        }
       }
     }
 
-    // ✅ Finally delete the container
+    // ✅ Always delete the corresponding containerNumberModel record
+    await containerNumberModel.findOneAndDelete({
+      ContainerNumber: container.ContainerNumber,
+    });
+
+    // ✅ Finally delete the container itself
     await containerModel.findByIdAndDelete(id);
 
     return sendResponse(res, 200, false, {}, {
-      message: "Container deleted, invoices reset, and remaining pieces updated successfully."
+      message: `Container deleted successfully. ${
+        statusLower === "shipment in container" ? "Shipments updated." : "Shipments untouched (delivered)."
+      }`,
     });
-
   } catch (error) {
     console.error("Error deleting container:", error);
     return sendResponse(res, 500, true, { general: error.message }, null);
   }
 };
+
 
 
 
