@@ -12,10 +12,10 @@ export const addContainerNumberController = async (req, res) => {
         if (!ContainerNumber || !From || !To) {
             return sendResponse(res, 400, true, {general:"All Fields are required of Container Number Section"}, null)
         }
-        // const haveContainerNumber =await containerNumberModel.findOne({ ContainerNumber })
-        // if (haveContainerNumber) {
-        //             return sendResponse(res,409,true,{container:"Container Number already added"},null)
-        // }
+        const haveContainerNumber =await containerNumberModel.findOne({ ContainerNumber })
+        if (haveContainerNumber) {
+                    return sendResponse(res,409,true,{container:"Container Number already added"},null)
+        }
 
         const newContainerNumber = new containerNumberModel({
             ContainerNumber,

@@ -100,7 +100,7 @@ export const updateSingleContainer = async (req, res) => {
     if (
       !containerNumber || !fromDestination || !toDestination ||
       !Array.isArray(invoices) || invoices.length === 0 ||
-      !status || !Array.isArray(previousInvoices) || previousInvoices.length === 0
+      !status || !Array.isArray(previousInvoices)
     ) {
       return sendResponse(res, 400, true, { general: 'Missing required fields' }, null);
     }
@@ -121,8 +121,13 @@ export const updateSingleContainer = async (req, res) => {
     const newInvoiceMap = parseInvoices(invoices);
     const previousInvoiceMap = parseInvoices(previousInvoices);
 
-    for (const invNo of Object.keys(newInvoiceMap)) {
-      const newQty = newInvoiceMap[invNo];
+    const allInvoices = new Set([
+      ...Object.keys(newInvoiceMap),
+      ...Object.keys(previousInvoiceMap)
+    ]);
+
+    for (const invNo of allInvoices) {
+      const newQty = newInvoiceMap[invNo] || 0;
       const oldQty = previousInvoiceMap[invNo] || 0;
       const diff = newQty - oldQty;
 
@@ -139,19 +144,18 @@ export const updateSingleContainer = async (req, res) => {
 
         const totalPieces = s.Pieces ?? s.NoOfPieces ?? 0;
 
-        // Fallback if RemainingPieces is invalid or missing
+        // Ensure valid RemainingPieces
         if (s.RemainingPieces === undefined || isNaN(s.RemainingPieces)) {
           s.RemainingPieces = totalPieces;
         }
-        
 
         if (diff > 0) {
-          // Pieces increased in this container → reduce from shipment
+          // Invoice quantity INCREASED → subtract from remaining
           const reduceQty = Math.min(s.RemainingPieces, remainingDiff);
           s.RemainingPieces -= reduceQty;
           remainingDiff -= reduceQty;
         } else {
-          // Pieces reduced in this container → add back to shipment
+          // Invoice quantity DECREASED or REMOVED → add back to remaining
           const canAddBack = totalPieces - s.RemainingPieces;
           const addBackQty = Math.min(canAddBack, remainingDiff);
           s.RemainingPieces += addBackQty;
@@ -206,6 +210,7 @@ export const updateSingleContainer = async (req, res) => {
 
 
 
+
 export const getallContainersList = async (req, res) => {
     try {
         const containersList = await containerModel.find()
@@ -241,15 +246,22 @@ export const updateSinglelContainerStatus = async (req, res) => {
 
     const { Status } = req.body;
 
-const updatedContainer = await containerModel.findByIdAndUpdate(
-  id,
-  { $set: { Status } }, // wrap Status inside an object
-  { new: true }
-);
-
+    const updatedContainer = await containerModel.findByIdAndUpdate(
+      id,
+      { $set: { Status } },
+      { new: true }
+    );
 
     if (!updatedContainer) {
       return sendResponse(res, 404, true, { general: "No Container found to update" }, null);
+    }
+
+    // ✅ If status is Delivered, set Invoices to null in containerNumberModel
+    if (Status === 'Delivered') {
+      await containerNumberModel.findOneAndUpdate(
+        { ContainerNumber: updatedContainer.ContainerNumber },
+        { $set: { Invoices: null } }
+      );
     }
 
     return sendResponse(res, 200, false, {}, {
@@ -260,6 +272,7 @@ const updatedContainer = await containerModel.findByIdAndUpdate(
     return sendResponse(res, 500, true, { general: error.message }, null);
   }
 };
+
 export const updateBulkContainerStatus = async (req, res) => {
   try {
     const { containers } = req.body;
