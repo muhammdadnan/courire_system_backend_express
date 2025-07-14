@@ -322,7 +322,10 @@ export const deleteBookingController = async (req, res) => {
     // console.log(builtyRecord.NoOfPieces);
     // console.log( builtyRecord.RemainingPieces);
     
-    if ( builtyRecord.RemainingPieces !== 0) {
+    if (
+  builtyRecord.RemainingPieces !== builtyRecord.NoOfPieces &&
+  builtyRecord.RemainingPieces !== 0
+){
       return sendResponse(res, 400, true, { general: `This Booking is no more deletable already in process` }, null);
     }
 
