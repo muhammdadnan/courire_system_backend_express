@@ -2,63 +2,108 @@ import { sendResponse } from "../helpers/sendResponse.js";
 import twilio from 'twilio'
 import 'dotenv/config'
 import fs from 'fs'
-import path from 'path'
+import 'dotenv/config'
 import shipmentSchemaModel from '../models/shipmentSchema.model.js'
-export const whatsappController = async (req, res) => {
-    try {
-        // const { marketingImage, marketingFile } = req.files;
-        const { whatsappNumbers } = req.body
-        console.log(typeof whatsappNumbers);
-        
-        if (!Array.isArray(whatsappNumbers) || whatsappNumbers.length === 0) {
-            return sendResponse(res, 400, true, { general: "No WhatsApp numbers provided." }, null);
-          }
-        const customMessage = `🟢 Hello from our backend! Here's a message sent directly via  WhatsApp at ${new Date().toLocaleString()}`;
+import cloudinary from '../lib/configs/cloudinary.config.js'
+// import { v2 as cloudinary } from 'cloudinary';
 
-        // console.log("marketingImage",marketingImage);
-        // console.log("marketingFile",marketingFile);
-        // 
-        // const BASE_URL =
-        // process.env.NODE_ENV === "production"
-        //   ? process.env.BASE_URL_PROD
-        //         : process.env.BASE_URL_DEV;
-        
-        
-        // const uploaded = marketingImage?.[0] || marketingFile?.[0];
-        // // console.log("uploaded",uploaded);
-        // if (!uploaded) {
-        //     return sendResponse(res, 400, true, { general: "No file uploaded." }, null);
-        // }
-        // // 🔁 Move file to /uploads
-        // const oldPath = uploaded.path; // temp folder
-        // const newPath = path.join('uploads', uploaded.originalname); // permanent
-        // // console.log("newPath",newPath); // Create uploads folder if not exist
-        // if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
-        
-        // // ✅ Copy file to uploads
-        // fs.copyFileSync(oldPath, newPath);
-        
-        // // ✅ Delete temp file
-        // fs.unlinkSync(oldPath);
-        // Twilio credentials
-        // const numbers = [
-        //     'whatsapp:+923493445479',
-        //     // 'whatsapp:+923004445566'
-        // ];
-        //  // 📎 Create public file URL
-        // const fileUrl = `${BASE_URL}/uploads/${uploaded.originalname}`;
-        // console.log(fileUrl);
-        
-        
-        
-          return sendResponse(res, 200, false, {}, {
-            message: "Messages  sent successfully!",
-            total: whatsappNumbers.length
-          });
-    } catch (error) {
-        return sendResponse(res, 500, true, { general: error.message }, null);
+export const whatsappController = async (req, res) => {
+  try {
+    const files = req.files;
+    let { whatsappNumbers } = req.body;
+// console.log(req.body);
+
+    // ✅ Validation
+    if (
+      (!files.marketingImage || files.marketingImage.length === 0) &&
+      (!files.marketingFile || files.marketingFile.length === 0)
+    ) {
+      return sendResponse(res, 400, true, {
+        general: 'Either marketingImage or marketingFile is required.',
+      }, null);
     }
+
+    if (
+      files.marketingImage &&
+      files.marketingImage.length > 0 &&
+      files.marketingFile &&
+      files.marketingFile.length > 0
+    ) {
+      return sendResponse(res, 400, true, {
+        general: 'Only one of marketingImage or marketingFile should be uploaded, not both.',
+      }, null);
+    }
+
+    if (!Array.isArray(whatsappNumbers)) {
+  if (whatsappNumbers) {
+    whatsappNumbers = [whatsappNumbers];
+  } else {
+    whatsappNumbers = [];
+  }
 }
+
+if (whatsappNumbers.length === 0) {
+  return sendResponse(res, 400, true, {
+    general: "No WhatsApp numbers provided.",
+  }, null);
+}
+
+    // ✅ Safe Extraction
+    const marketingImageFile = files.marketingImage?.[0] || null;
+    const marketingFile = files.marketingFile?.[0] || null;
+
+    let uploadedFileUrl = '';
+    let publicId = ''; // to store for deletion
+
+    if (marketingImageFile) {
+      const result = await cloudinary.uploader.upload(
+        marketingImageFile.path,
+        { folder: "whatsapp-media" }
+      );
+      uploadedFileUrl = result.secure_url;
+      publicId = result.public_id;
+    } else if (marketingFile) {
+      const result = await cloudinary.uploader.upload(
+        marketingFile.path,
+        { folder: "whatsapp-media" }
+      );
+      console.log(result);
+      
+      uploadedFileUrl = result.secure_url;
+      publicId = result.public_id;
+    }
+
+    // ✅ Twilio setup
+    const accountSid = process.env.accountSid;
+    const authToken = process.env.authToken;
+    const client = twilio(accountSid, authToken);
+
+    // ✅ Send to all numbers
+    for (let number of whatsappNumbers) {
+      await client.messages.create({
+        from: 'whatsapp:+14155238886',
+        to: `whatsapp:${number}`,
+        body: 'Here is the file 📎',
+        mediaUrl: [uploadedFileUrl],
+      });
+    }
+
+    // ✅ Delete from Cloudinary after all messages are sent
+    if (publicId) {
+      await cloudinary.uploader.destroy(publicId);
+    }
+
+    return sendResponse(res, 200, false, {}, {
+      message: "Messages sent and file deleted from cloudinary!",
+      total: whatsappNumbers.length,
+    });
+
+  } catch (error) {
+    console.error("❌ Error:", error);
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
+
 
 export const GetWhatsappNumberController = async (req, res) => {
   try {

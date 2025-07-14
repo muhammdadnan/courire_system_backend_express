@@ -4,8 +4,8 @@ import { whatsappController,GetWhatsappNumberController } from '../controllers/w
 
 const routers = express.Router()
 
-// routers.post('/whatsapp', singleMarketingUpload,whatsappController)
-routers.post('/whatsapp',whatsappController)
+routers.post('/whatsapp', singleMarketingUpload,whatsappController)
+// routers.post('/whatsapp',whatsappController)
 routers.get('/all-whatsapp',GetWhatsappNumberController)
 
 export default routers
