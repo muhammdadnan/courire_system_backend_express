@@ -1,6 +1,6 @@
 import {sendResponse} from '../helpers/sendResponse.js'
 import containerNumberModel from '../models/containerNumber.model.js'
-
+import containerModel from '../models/container.model.js'
 export const addContainerNumberController = async (req, res) => {
     try {
         const { 
@@ -45,32 +45,68 @@ export const editContainerNumberController = async (req, res) => {
             ContainerNumber,
             From,
             To
-        } = req.body
-        console.log(req.body);
+        } = req.body;
+
         if (!ContainerNumber || !From || !To) {
-            return sendResponse(res, 400, true, {general:"All Fields are required of Container Number Section"}, null)
+            return sendResponse(res, 400, true, { general: "All Fields are required of Container Number Section" }, null);
         }
-        const haveContainerNumber =await containerNumberModel.findOne({ ContainerNumber })
+
+        const haveContainerNumber = await containerNumberModel.findOne({ ContainerNumber });
+
         if (!haveContainerNumber) {
-                    return sendResponse(res,409,true,{container:"Container Number doesnot exist"},null)
+            return sendResponse(res, 409, true, { container: "Container Number does not exist" }, null);
         }
-        
-        
+
+        // ✅ Update containerNumberModel
         await haveContainerNumber.updateOne({
             ContainerNumber,
             From,
             To    
-        })
+        });
+
+     // 1. Pehle ContainerNumber ke saare records nikal lo
+const allMatchingContainers = await containerModel.find({ ContainerNumber });
+
+// 2. Filter karo jo Delivered NA ho
+const targetContainer = allMatchingContainers.find(
+  (item) => item.Status.toLowerCase() !== 'delivered'
+);
+
+// 3. Agar koi "non-delivered" mila to usko update karo
+if (targetContainer) {
+  await containerModel.updateOne(
+    { _id: targetContainer._id },
+    {
+      $set: {
+        Destination: {
+          From,
+          To,
+        },
+      },
+    }
+  );
+}
+
+// // 4. Agar saare Delivered the to kuch bhi mat karo (silent return)
+// return sendResponse(res, 200, false, {}, { message: 'Container Number Updated Successfully' });
+
+
+        // console.log(updatedContainer);
+        
         return sendResponse(res, 200, false, {}, {
             containerNoData: {
                 ContainerNumber,
                 From,
                 To
-        },message:"Container Number Updated Successfully"});
+            },
+            message: "Container Number Updated Successfully"
+        });
+
     } catch (error) {
-         return sendResponse(res,500,true,{ general: error.message },null)
+        return sendResponse(res, 500, true, { general: error.message }, null);
     }
-}
+};
+
 
 
 export const deleteContainerNumberController = async (req, res) => {
