@@ -65,7 +65,7 @@ if (whatsappNumbers.length === 0) {
     } else if (marketingFile) {
       const result = await cloudinary.uploader.upload(
         marketingFile.path,
-        { folder: "whatsapp-media" }
+        { folder: "whatsapp-media",resource_type:'raw' }
       );
       console.log(result);
       
