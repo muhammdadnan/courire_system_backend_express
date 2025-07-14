@@ -197,23 +197,36 @@ export const getAllBookingController = async (req, res) => {
 
     const enrichedBookings = await Promise.all(
       bookings.map(async (booking) => {
-        let status = "Shipment in Godown";
+        const invoiceFull = booking.InvoiceNo;       // e.g. "101/5"
+        const [invNo] = invoiceFull?.split("/") || [];
 
-        const invoice = booking?.InvoiceNo;
-        const [invNo] = invoice?.split("/") || [];
+        const containers = invNo
+          ? await containerModel.find({
+              Invoices: { $elemMatch: { $regex: `^${invNo}/` } },
+            })
+          : [];
 
-        if (invNo) {
-          const containers = await containerModel.find({
-            Invoices: { $elemMatch: { $regex: `^${invNo}/` } }
-          });
+        // Collect statuses from all containers
+        const statuses = containers
+          .map(c => c.Status)
+          .filter(Boolean);
 
-          const statusArray = containers.map((c) => c.Status).filter(Boolean);
-          const uniqueStatuses = [...new Set(statusArray)];
+        let statusList = [...new Set(statuses)]; // dedupe
 
-          if (uniqueStatuses.length > 0) {
-            status = uniqueStatuses.join(", ");
-          }
+        // 2. Check shipment remaining pieces
+        if (booking.RemainingPieces > 0) {
+          statusList.push("Shipment in Godown");
         }
+
+        // 3. If all statuses are "delivered" (case-insensitive), replace with single lowercase
+        if (
+          statusList.length > 0 &&
+          statusList.every(s => s.toLowerCase() === "delivered")
+        ) {
+          statusList = ["delivered"];
+        }
+
+        const status = statusList.join(", ");
 
         return {
           ...booking._doc,
@@ -222,17 +235,15 @@ export const getAllBookingController = async (req, res) => {
       })
     );
 
-    return sendResponse(
-      res,
-      200,
-      false,
-      {},
-      { bookings: enrichedBookings, message: "Get all bookings" }
-    );
+    return sendResponse(res, 200, false, {}, {
+      bookings: enrichedBookings,
+      message: "Get all bookings"
+    });
   } catch (error) {
     return sendResponse(res, 500, true, { general: error.message }, null);
   }
 };
+
 
 
 
@@ -311,7 +322,7 @@ export const deleteBookingController = async (req, res) => {
     // console.log(builtyRecord.NoOfPieces);
     // console.log( builtyRecord.RemainingPieces);
     
-    if (builtyRecord.NoOfPieces !== builtyRecord.RemainingPieces) {
+    if ( builtyRecord.RemainingPieces !== 0) {
       return sendResponse(res, 400, true, { general: `This Booking is no more deletable already in process` }, null);
     }
 
