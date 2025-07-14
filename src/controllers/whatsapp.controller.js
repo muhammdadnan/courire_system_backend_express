@@ -3,6 +3,7 @@ import twilio from 'twilio'
 import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
+import shipmentSchemaModel from '../models/shipmentSchema.model.js'
 export const whatsappController = async (req, res) => {
     try {
         // const { marketingImage, marketingFile } = req.files;
@@ -58,3 +59,36 @@ export const whatsappController = async (req, res) => {
         return sendResponse(res, 500, true, { general: error.message }, null);
     }
 }
+
+export const GetWhatsappNumberController = async (req, res) => {
+  try {
+    // Get all required fields only
+    const allShipments = await shipmentSchemaModel.find({}, {
+      SenderMobile: 1,
+      SenderArea: 1,
+      ReceiverMobile1: 1,
+      ReceiverMobile2: 1,
+      ReceiverArea: 1,
+      _id: 0
+    });
+
+    // Format response
+    const result = allShipments.map(shipment => ({
+      sender: {
+        number: shipment.SenderMobile,
+        area: shipment.SenderArea
+      },
+      receiver: {
+        number1: shipment.ReceiverMobile1,
+        number2: shipment.ReceiverMobile2,
+        area: shipment.ReceiverArea
+      }
+    }));
+    console.log(result);
+    
+    return sendResponse(res, 200, false, null, {result,message:'All numbers fetch successfully'});
+
+  } catch (error) {
+    return sendResponse(res, 500, true, { general: error.message }, null);
+  }
+};
