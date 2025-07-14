@@ -81,7 +81,7 @@ if (whatsappNumbers.length === 0) {
     // ✅ Send to all numbers
     for (let number of whatsappNumbers) {
       await client.messages.create({
-        from: 'whatsapp:+14155238886',
+        from: `whatsapp:${process.env.twilio_number}`,
         to: `whatsapp:${number}`,
         body: 'Here is the file 📎',
         mediaUrl: [uploadedFileUrl],
