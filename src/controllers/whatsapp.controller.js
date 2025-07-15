@@ -96,9 +96,23 @@ if (whatsappNumbers.length === 0) {
     }
 
     // ✅ Delete from Cloudinary after all messages are sent
-    if (publicId) {
-      await cloudinary.uploader.destroy(publicId);
-    }
+  if (publicId) {
+  const ext = (marketingFile?.originalname || marketingImageFile?.originalname || '').split('.').pop().toLowerCase();
+
+  let resourceType = 'image'; // default
+  if (ext === 'mp4') {
+    resourceType = 'video';
+  } else if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+    resourceType = 'raw';
+  }
+
+  console.log("⛔ Deleting file:", publicId, "with type:", resourceType);
+
+  await cloudinary.uploader.destroy(publicId, {
+    resource_type: resourceType
+  });
+}
+
 
     return sendResponse(res, 200, false, {}, {
       message: "Messages sent and file deleted from cloudinary!",
