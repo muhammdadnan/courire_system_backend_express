@@ -63,9 +63,16 @@ if (whatsappNumbers.length === 0) {
       uploadedFileUrl = result.secure_url;
       publicId = result.public_id;
     } else if (marketingFile) {
+       const ext = marketingFile.originalname.split('.').pop().toLowerCase();
+        let resourceType = 'raw'; // default for docs, pdf, etc.
+        if (ext === 'mp4') {
+          resourceType = 'video';
+        }
+
+       
       const result = await cloudinary.uploader.upload(
         marketingFile.path,
-        { folder: "whatsapp-media",resource_type:'raw' }
+        { folder: "whatsapp-media",resource_type:resourceType }
       );
       console.log(result);
       
