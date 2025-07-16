@@ -319,13 +319,25 @@ export const deleteBookingController = async (req, res) => {
     // if (builtyRecord.Pieces !== builtyRecord.RemainingPieces) {
     //   return sendResponse(res, 400, true, { general: `"This booking is already added to a container and cannot be deleted."` }, null);
     // }
-    // console.log(builtyRecord.NoOfPieces);
-    // console.log( builtyRecord.RemainingPieces);
-    console.log(builtyRecord.RemainingPieces);
-    console.log(builtyRecord.NoOfPieces);
+
+     const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
+    const invoiceNo = fullInvoice?.split('/')?.[0];  
+    
+    const containers = await containerModel.find({ Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } });
+    
+    // console.log(containers)
+    const allDelivered = containers.every(container => container.Status.toLowerCase() === 'delivered');
+    
+      if (containers.length > 0 && allDelivered) {
+     await builtyRecord.deleteOne();
+
+    return sendResponse(res, 200, false, {}, {
+      message: "Bilty deleted successfully!",
+    });
+    }
     
     if (
-  builtyRecord.RemainingPieces < builtyRecord.NoOfPieces ||
+      builtyRecord.RemainingPieces < builtyRecord.NoOfPieces ||
   builtyRecord.RemainingPieces === 0
 ){
       return sendResponse(res, 400, true, { general: `This Booking is no more deletable already in process` }, null);
@@ -338,6 +350,7 @@ export const deleteBookingController = async (req, res) => {
     // if (!invoiceNo) {
     //   return sendResponse(res, 400, true, { general: "Invalid Invoice Number format" }, null);
     // }
+
 
     // // 4. Remove invoice from containerModel
     // await containerModel.updateMany(
@@ -352,7 +365,7 @@ export const deleteBookingController = async (req, res) => {
     // );
 
     // 6. Delete the shipment itself
-    // await builtyRecord.deleteOne();
+    await builtyRecord.deleteOne();
 
     return sendResponse(res, 200, false, {}, {
       message: "Bilty deleted successfully!",
