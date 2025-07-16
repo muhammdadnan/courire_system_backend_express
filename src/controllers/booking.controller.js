@@ -299,72 +299,159 @@ export const getBookingSingleController = async (req, res) => {
   }
 };
  
+// export const deleteBookingController = async (req, res) => {
+//   try {
+//     const { BiltyNo } = req.body;
+
+//     // 1. Validate input
+//     if (!BiltyNo) {
+//       return sendResponse(res, 400, true, { general: "Bilty No is required" }, null);
+//     }
+
+//     // 2. Find the shipment
+//     const builtyRecord = await shipmentSchemaModel.findOne({ BiltyNo });
+
+//     if (!builtyRecord) {
+//       return sendResponse(res, 409, true, { general: "Bilty not found" }, null);
+//     }
+
+
+//      const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
+//     const invoiceNo = fullInvoice?.split('/')?.[0];
+    
+//     const containers = await containerModel.find({ Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } });
+    
+//     const allDelivered = containers.every(container => container.Status.toLowerCase() === 'delivered');
+      
+//       if (containers.length > 0 && allDelivered) {
+//         await containerModel.updateMany(
+//           { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+//           { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+//         );
+    
+//         // // 5. Remove invoice from containerNumberModel
+//         await containerNumberModel.updateMany(
+//           { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+//           { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+//         );
+//      await builtyRecord.deleteOne();
+
+//     return sendResponse(res, 200, false, {}, {
+//       message: "Bilty deleted successfully!",
+//     });
+//     }
+    
+//     if (
+//       builtyRecord.RemainingPieces < builtyRecord.NoOfPieces ||
+//   builtyRecord.RemainingPieces === 0
+// ){
+//       return sendResponse(res, 400, true, { general: `This Booking is no more deletable already in process` }, null);
+//     }
+
+//     // // 3. Extract invoice number
+//     // const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
+//     // const invoiceNo = fullInvoice?.split('/')?.[0];   // e.g. "INV001"
+
+//     // if (!invoiceNo) {
+//     //   return sendResponse(res, 400, true, { general: "Invalid Invoice Number format" }, null);
+//     // }
+
+
+//     // // 4. Remove invoice from containerModel
+//     // await containerModel.updateMany(
+//     //   { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+//     //   { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+//     // );
+
+//     // // 5. Remove invoice from containerNumberModel
+//     // await containerNumberModel.updateMany(
+//     //   { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
+//     //   { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+//     // );
+
+//     // 6. Delete the shipment itself
+//     await builtyRecord.deleteOne();
+
+//     return sendResponse(res, 200, false, {}, {
+//       message: "Bilty deleted successfully!",
+//     });
+
+//   } catch (error) {
+//     return sendResponse(res, 500, true, { general: error.message }, null);
+//   }
+// };
+
+
 export const deleteBookingController = async (req, res) => {
   try {
     const { BiltyNo } = req.body;
 
-    // 1. Validate input
     if (!BiltyNo) {
       return sendResponse(res, 400, true, { general: "Bilty No is required" }, null);
     }
 
-    // 2. Find the shipment
     const builtyRecord = await shipmentSchemaModel.findOne({ BiltyNo });
-
     if (!builtyRecord) {
       return sendResponse(res, 409, true, { general: "Bilty not found" }, null);
     }
 
-    // 2.1 Check if this bilty has been partially shipped
-    // if (builtyRecord.Pieces !== builtyRecord.RemainingPieces) {
-    //   return sendResponse(res, 400, true, { general: `"This booking is already added to a container and cannot be deleted."` }, null);
-    // }
+    const fullInvoice = builtyRecord.InvoiceNo; // e.g. "INV101/6"
+    const invoiceNo = fullInvoice?.split('/')?.[0]; // "INV101"
 
-     const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
-    const invoiceNo = fullInvoice?.split('/')?.[0];  
-    
-    const containers = await containerModel.find({ Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } });
-    
-    // console.log(containers)
-    const allDelivered = containers.every(container => container.Status.toLowerCase() === 'delivered');
-    
-      if (containers.length > 0 && allDelivered) {
-     await builtyRecord.deleteOne();
+    const containers = await containerModel.find({
+      Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } }
+    });
 
-    return sendResponse(res, 200, false, {}, {
+    // STEP 1: Check all containers with this invoice have status = 'delivered'
+    const allDelivered = containers.every(c =>
+      c.Invoices.some(i => i.startsWith(`${invoiceNo}/`)) &&
+      c.Status.toLowerCase() === 'delivered'
+    );
+
+    if (allDelivered) {
+      // STEP 2: Remove invoice from containers (only delivered ones)
+      for (const container of containers) {
+        const hasThisInvoice = container.Invoices.some(i => i.startsWith(`${invoiceNo}/`));
+  
+        if (hasThisInvoice && container.Status.toLowerCase() === 'delivered') {
+          // Remove the invoice from container
+          container.Invoices = container.Invoices.filter(i => !i.startsWith(`${invoiceNo}/`));
+  
+          if (container.Invoices.length === 0) {
+            // If container has no more invoices → delete container and containerNumber
+            await containerModel.deleteOne({ _id: container._id });
+            await containerNumberModel.deleteOne({ ContainerNumber: container.ContainerNumber });
+          } else {
+            // Else just update the invoice list
+            await container.save();
+            await containerNumberModel.updateOne(
+              { ContainerNumber: container.ContainerNumber },
+              { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
+            );
+          }
+        }
+      }
+      
+      await builtyRecord.deleteOne();
+        return sendResponse(res, 200, false, {}, {
       message: "Bilty deleted successfully!",
     });
+
     }
-    
+
+
+    // STEP 3: Check for partial booking condition
     if (
       builtyRecord.RemainingPieces < builtyRecord.NoOfPieces ||
-  builtyRecord.RemainingPieces === 0
-){
-      return sendResponse(res, 400, true, { general: `This Booking is no more deletable already in process` }, null);
+      builtyRecord.RemainingPieces === 0
+    ) {
+      return sendResponse(res, 400, true, {
+        general: `This Booking is no more deletable — already in process.`,
+      }, null);
     }
 
-    // // 3. Extract invoice number
-    // const fullInvoice = builtyRecord.InvoiceNo;       // e.g. "INV001/3"
-    // const invoiceNo = fullInvoice?.split('/')?.[0];   // e.g. "INV001"
-
-    // if (!invoiceNo) {
-    //   return sendResponse(res, 400, true, { general: "Invalid Invoice Number format" }, null);
-    // }
-
-
-    // // 4. Remove invoice from containerModel
-    // await containerModel.updateMany(
-    //   { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
-    //   { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
-    // );
-
-    // // 5. Remove invoice from containerNumberModel
-    // await containerNumberModel.updateMany(
-    //   { Invoices: { $elemMatch: { $regex: `^${invoiceNo}/` } } },
-    //   { $pull: { Invoices: { $regex: `^${invoiceNo}/` } } }
-    // );
-
-    // 6. Delete the shipment itself
+    // STEP 4: Finally delete bilty
+    // STEP 4: Finally delete bilty
     await builtyRecord.deleteOne();
 
     return sendResponse(res, 200, false, {}, {
