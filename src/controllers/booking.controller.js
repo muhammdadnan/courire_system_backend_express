@@ -321,10 +321,12 @@ export const deleteBookingController = async (req, res) => {
     // }
     // console.log(builtyRecord.NoOfPieces);
     // console.log( builtyRecord.RemainingPieces);
+    console.log(builtyRecord.RemainingPieces);
+    console.log(builtyRecord.NoOfPieces);
     
     if (
-  builtyRecord.RemainingPieces !== builtyRecord.NoOfPieces &&
-  builtyRecord.RemainingPieces !== 0
+  builtyRecord.RemainingPieces < builtyRecord.NoOfPieces ||
+  builtyRecord.RemainingPieces === 0
 ){
       return sendResponse(res, 400, true, { general: `This Booking is no more deletable already in process` }, null);
     }
@@ -350,10 +352,10 @@ export const deleteBookingController = async (req, res) => {
     // );
 
     // 6. Delete the shipment itself
-    await builtyRecord.deleteOne();
+    // await builtyRecord.deleteOne();
 
     return sendResponse(res, 200, false, {}, {
-      message: "Bilty deleted successfully and removed from all containers.",
+      message: "Bilty deleted successfully!",
     });
 
   } catch (error) {
