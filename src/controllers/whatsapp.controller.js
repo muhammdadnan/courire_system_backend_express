@@ -137,7 +137,7 @@ if (whatsappNumbers.length === 0) {
 
 
     return sendResponse(res, 200, false, {}, {
-      message: "Messages sent and file deleted from cloudinary!",
+      message: "Messages sent successfully!",
       total: whatsappNumbers.length,
     });
 
