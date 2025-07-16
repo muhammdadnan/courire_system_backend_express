@@ -11,8 +11,6 @@ export const whatsappController = async (req, res) => {
   try {
     const files = req.files;
     let { whatsappNumbers } = req.body;
-// console.log(req.body);
-
     // ✅ Validation
     if (
       (!files.marketingImage || files.marketingImage.length === 0) &&
@@ -54,27 +52,37 @@ if (whatsappNumbers.length === 0) {
 
     let uploadedFileUrl = '';
     let publicId = ''; // to store for deletion
+    let resourceType = 'image'; 
+  // console.log("marketingFile:", marketingFile);
+// console.log("originalname:", marketingFile?.originalname);
 
     if (marketingImageFile) {
+      const ext = marketingImageFile.originalname.split('.').pop().toLowerCase();
+      resourceType = 'image'; 
       const result = await cloudinary.uploader.upload(
         marketingImageFile.path,
-        { folder: "whatsapp-media" }
+        { folder: "whatsapp-media",resource_type:resourceType }
       );
       uploadedFileUrl = result.secure_url;
       publicId = result.public_id;
-    } else if (marketingFile) {
+    }
+    else if (marketingFile) {
        const ext = marketingFile.originalname.split('.').pop().toLowerCase();
-        let resourceType = 'raw'; // default for docs, pdf, etc.
         if (ext === 'mp4') {
           resourceType = 'video';
+        } else if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+          resourceType = 'raw';
+        } else {
+          resourceType = 'image';
         }
-
+//  console.log("resourceType",resourceType);
+ 
        
       const result = await cloudinary.uploader.upload(
         marketingFile.path,
         { folder: "whatsapp-media",resource_type:resourceType }
       );
-      console.log(result);
+      // console.log("save to cloudinary",result.secure_url);
       
       uploadedFileUrl = result.secure_url;
       publicId = result.public_id;
@@ -96,21 +104,35 @@ if (whatsappNumbers.length === 0) {
     }
 
     // ✅ Delete from Cloudinary after all messages are sent
-  if (publicId) {
-  const ext = (marketingFile?.originalname || marketingImageFile?.originalname || '').split('.').pop().toLowerCase();
+//   if (publicId) {
+//   const ext = (marketingFile?.originalname || marketingImageFile?.originalname || '').split('.').pop().toLowerCase();
+//   console.log(ext);
 
-  let resourceType = 'image'; // default
-  if (ext === 'mp4') {
-    resourceType = 'video';
-  } else if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
-    resourceType = 'raw';
+//   let resourceType
+//     if (ext === 'mp4') {
+//       resourceType = 'video';
+//     } else if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+//       resourceType = 'raw';
+//     } else {
+      
+//       resourceType = 'image';
+//     }
+// console.log(resourceType);
+
+//   await cloudinary.uploader.destroy(publicId, {
+//     resource_type: resourceType
+//   });
+//   console.log("⛔ Deleting file from cloudinary", publicId, "with type:", resourceType);
+    // }
+    if (publicId) {
+  try {
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType
+    });
+    // console.log("✅ Deleted from Cloudinary:", publicId, "Type:", resourceType);
+  } catch (error) {
+    return sendResponse(res, 400, true, { general: "Error in cloudinary" }, null);
   }
-
-  console.log("⛔ Deleting file:", publicId, "with type:", resourceType);
-
-  await cloudinary.uploader.destroy(publicId, {
-    resource_type: resourceType
-  });
 }
 
 
@@ -150,7 +172,7 @@ export const GetWhatsappNumberController = async (req, res) => {
         area: shipment.ReceiverArea
       }
     }));
-    console.log(result);
+    // console.log(result);
     
     return sendResponse(res, 200, false, null, {result,message:'All numbers fetch successfully'});
 
