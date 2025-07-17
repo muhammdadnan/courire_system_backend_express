@@ -70,15 +70,16 @@ const shipmentSchema = new mongoose.Schema({
             total: { type: Number, default: 0 },
           },
     },
-    SubTotal: { type: Number },
+    SubTotal: { type: Number,required: true },
     Vat: { type: Number },
     VatTotal: { type: Number },
-    InvoiceTotal: { type: Number },
+    InvoiceTotal: { type: Number,required: true },
     
-    AmountInWords: { type: String },
+    AmountInWords: { type: String,required: true },
     
-    BiltyNo: { type: String },
-    InvoiceNo: { type: String },
+    BiltyNo: { type: String,required: true },
+  InvoiceNo: { type: String,required: true },
+    City:{type:String,required: true}
     
 }, {
     timestamps:true
