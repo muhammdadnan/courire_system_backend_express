@@ -35,7 +35,8 @@ export const addBookingController = async (req, res) => {
             VatTotal,
 
             AmountInWords,
-            InvoiceTotal
+            InvoiceTotal,
+            City
 
         } = req.body
         // console.log(TotalWeight);
@@ -87,7 +88,8 @@ export const addBookingController = async (req, res) => {
                 VatTotal,
     
                 AmountInWords,
-                InvoiceTotal
+                InvoiceTotal,
+                City
             })
         
         await newBooking.save()
@@ -120,7 +122,8 @@ export const addBookingController = async (req, res) => {
                 VatTotal,
     
                 AmountInWords,
-                InvoiceTotal
+                InvoiceTotal,
+                City
         },message:"Booking Registered Succesfully"})
 
     } catch (error) {
@@ -138,7 +141,7 @@ export const editBookingController = async (req, res) => {
         ItemDetails, OtherDetails,
         NoOfPieces, Branch, BookingDate,
         Charges, Discount, SubTotal, Vat, VatTotal,
-        AmountInWords, InvoiceTotal
+        AmountInWords, InvoiceTotal,City
       } = req.body;
   
       const updateData = {
@@ -147,7 +150,7 @@ export const editBookingController = async (req, res) => {
         ItemDetails, OtherDetails,
         NoOfPieces, Branch, BookingDate,
         Charges, Discount, SubTotal, Vat, VatTotal,
-        AmountInWords, InvoiceTotal
+        AmountInWords, InvoiceTotal,City
       };
   
       let bookingDoc;
