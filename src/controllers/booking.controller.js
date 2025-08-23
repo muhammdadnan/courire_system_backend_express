@@ -6,9 +6,11 @@ import mongoose from 'mongoose'
 
 export const addBookingController = async (req, res) => {
     try {
-        console.log(req.body);
+        // console.log(req.body);
         
-        const {
+      const {
+            BiltyNo,
+
             SenderName,
             SenderMobile,
             SenderIdNumber,
@@ -41,13 +43,14 @@ export const addBookingController = async (req, res) => {
         } = req.body
         // console.log(TotalWeight);
         // console.log(UnitRate);
-        
-        const trackingId = Math.floor(100000000000 + Math.random() * 900000000000);
-
-        const haveTrackingId =await shipmentSchemaModel.findOne({ trackingId })
-        if (haveTrackingId) {
-                    return sendResponse(res,409,true,{container:"Tracking Id already registered"},null)
-        }
+        let trackingId = BiltyNo  
+        if (!trackingId) {
+          trackingId = Math.floor(100000000000 + Math.random() * 900000000000); 
+      }
+      const haveTrackingId =await shipmentSchemaModel.findOne({BiltyNo: trackingId })
+          if (haveTrackingId) {
+                      return sendResponse(res,409,true,{general:"Tracking Id already registered"},null)
+          }
 
         const previouInvoiceNo = await shipmentSchemaModel.findOne().sort({ createdAt: -1  })
         let invoiceNo
@@ -410,7 +413,8 @@ export const deleteBookingController = async (req, res) => {
       c.Invoices.some(i => i.startsWith(`${invoiceNo}/`)) &&
       c.Status.toLowerCase() === 'delivered'
     );
-
+    console.log(allDelivered);
+    
     if (allDelivered) {
       // STEP 2: Remove invoice from containers (only delivered ones)
       for (const container of containers) {
@@ -442,9 +446,14 @@ export const deleteBookingController = async (req, res) => {
 
     }
 
-
+    console.log(builtyRecord.RemainingPieces);
+    // console.log(builtyRecord.NoOfPieces);
+    console.log(BiltyNo);
+    
     // STEP 3: Check for partial booking condition
     if (
+      // 10 < 10 = False
+      // 10 === 0 False
       builtyRecord.RemainingPieces < builtyRecord.NoOfPieces ||
       builtyRecord.RemainingPieces === 0
     ) {
