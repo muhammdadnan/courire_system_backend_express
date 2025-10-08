@@ -320,6 +320,40 @@ export const updateSinglelContainerStatus = async (req, res) => {
       return sendResponse(res, 404, true, { general: "No Container found to update" }, null);
     }
 
+    const targetContainerNumber = updatedContainer.ContainerNumber;
+    const newStatusDate = new Date();
+
+    // 2. Efficient Shipments Search (Sirf woh shipments dhoondo jinka tracking_details mein yeh container hai)
+    const shipments = await shipmentSchemaModel.find({
+      'tracking_details.containerNumber': targetContainerNumber
+    });
+
+    for (const s of shipments) {
+      const trackingDetail = s.tracking_details.find(detail => {
+        return detail.containerNumber === targetContainerNumber;
+      });
+
+      if (trackingDetail) {
+        // 3. Purana Status History Mein Save Karo (Naya record push karna zaroori hai)
+        s.tracking_history.push({
+          invoiceId: trackingDetail.invoiceId,
+          containerNumber: trackingDetail.containerNumber,
+          pieces: trackingDetail.pieces,
+          oldStatusDate: trackingDetail.currentStatusDate, // tracking_details se purani date
+          oldStatus: trackingDetail.currentStatus,         // tracking_details se purana status
+          // remarks: Remarks || '',
+          // location: Location || '',
+        });
+
+        // 4. Tracking Details Ko Naye Status Se Update Karo
+        trackingDetail.currentStatusDate = newStatusDate;
+        trackingDetail.currentStatus = Status;
+
+        await s.save();
+      }
+    }
+
+
     // ✅ If status is Delivered, set Invoices to null in containerNumberModel
     if (Status.toLowerCase() === 'delivered') {
        await containerNumberModel.findOneAndDelete({
@@ -362,6 +396,39 @@ export const updateBulkContainerStatus = async (req, res) => {
       );
 
       if (updated) {
+        const newStatusDate = new Date(); // Naye status ki date
+        const targetContainerNumber = updated.ContainerNumber;
+        // Sirf woh shipments dhoondho jinka tracking_details mein yeh container hai
+                const matchingShipments = await shipmentSchemaModel.find({
+                    'tracking_details.containerNumber': targetContainerNumber
+                });
+                for (const shipment of matchingShipments) {
+                    // Tracking detail dhoondo jo is container se related hai
+                    const trackingDetail = shipment.tracking_details.find(detail => {
+                        return detail.containerNumber === targetContainerNumber;
+                    });
+
+                    if (trackingDetail) {
+                        // 2.1. Purana Status History Mein Save Karo
+                        shipment.tracking_history.push({
+                            invoiceId: trackingDetail.invoiceId,
+                            containerNumber: trackingDetail.containerNumber,
+                            pieces: trackingDetail.pieces,
+                            oldStatusDate: trackingDetail.currentStatusDate, // Purani date (history mein save)
+                            oldStatus: trackingDetail.currentStatus,         // Purana status (history mein save)
+                            // remarks: remarks || `Status updated in bulk to ${status}`,
+                            // location: location || updatedContainer.Location || '',
+                        });
+
+                        // 2.2. Tracking Details Ko Naye Status Se Update Karo
+                        trackingDetail.currentStatusDate = newStatusDate; // Nayi date set
+                        trackingDetail.currentStatus = status;            // Naya status set
+
+                        await shipment.save();
+                    }
+                }
+
+
          // ✅ Delete from containerNumberModel if status is 'delivered'
         if (status.toLowerCase() === 'delivered') {
           await containerNumberModel.findOneAndDelete({
