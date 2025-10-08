@@ -36,19 +36,83 @@ export const addContainerController = async (req, res) => {
               if (toShip <= 0) break;
           
               if (s.RemainingPieces === undefined) s.RemainingPieces = s.Pieces;
-          
-              const shipQty = Math.min(s.RemainingPieces, toShip); // 👈 correct calculation
+          // Inside the loop: for (const s of shipments)
 
-    s.RemainingPieces -= shipQty;
-    await s.save();
+const shipQty = Math.min(s.RemainingPieces, toShip); 
+s.RemainingPieces -= shipQty;
 
-    toShip -= shipQty;
+// ab sb sy phly find krain gy invoice ko tracking details ki iinvoice sy taky update krskain 
+const findInvoice = s.tracking_details.find(detail => {
+    return detail.invoiceId === invNo && 
+           (detail.containerNumber === null || detail.containerNumber === 'N/A');
+});
+
+// double check kra ha 
+const detailToUpdate = findInvoice || s.tracking_details[s.tracking_details.length - 1]; 
+
+// agr details to update makxhha to phr
+if (detailToUpdate) {
+    s.tracking_history.push({
+        invoiceId: detailToUpdate.invoiceId, 
+        containerNumber: detailToUpdate.containerNumber || 'N/A',
+        pieces: detailToUpdate.pieces, 
+        oldStatusDate: detailToUpdate.currentStatusDate,
+        oldStatus: detailToUpdate.currentStatus,
+        // location: fromDestination, // Ya jo bhi purani location thi
+        // remarks: `Pieces split/moved to Container ${containerNumber}. Shipped Qty: ${shipQty} pcs.`,
+        // slNo: s.tracking_history.length + 1,
+    });
+
+    // agr us invice ky pieces bch jaty hain to phr hm us ko tracking details markhain gy with status shipment in godown
+    const remainingInOldRecord = detailToUpdate.pieces - shipQty;
+    
+    if (remainingInOldRecord > 0) {
+        // Purana record ab sirf bache hue pieces ko represent karega.
+        detailToUpdate.pieces = remainingInOldRecord;
+        
+        // Aur naya shipped piece ka record push hoga.
+        s.tracking_details.push({
+            invoiceId: s.InvoiceNo,
+            containerNumber: containerNumber,
+            pieces: shipQty, 
+            currentStatusDate: new Date(),
+            currentStatus: status,
+            location: toDestination, 
+        });
+        
+    } else {
+        // Agar saare pieces ship ho gaye (remainingInOldRecord <= 0), 
+        // to isi record ko naye status se update kar do.
+        detailToUpdate.containerNumber = containerNumber;
+        detailToUpdate.pieces = shipQty; // Total pieces shipped (ya detailToUpdate.pieces)
+        detailToUpdate.currentStatusDate = new Date();
+        detailToUpdate.currentStatus = status;
+        detailToUpdate.location = toDestination;
+    }
+} else {
+    // Agar tracking_details empty hai ya koi match nahi mila
+    // Handle error or push new entry
+    s.tracking_details.push({
+        invoiceId: s.InvoiceNo,
+        containerNumber: containerNumber,
+        pieces: shipQty,
+        currentStatusDate: new Date(),
+        currentStatus: status,
+        location: toDestination, 
+    });
+}
+
+// 4. Save the top-level document
+await s.save();
+
+toShip -= shipQty;
             }
       }
       console.log(invoices);
       
          // ✅ Step 2: Check if containerNumberModel exists & Invoices is empty
-    const containerRecord = await containerNumberModel.findOne({ ContainerNumber: containerNumber });
+    const containerRecord = await containerNumberModel.findOne({ 
+      ContainerNumber: containerNumber });
     
     if (containerRecord && (!containerRecord.Invoices || containerRecord.Invoices.length === 0)) {
       // Assign new invoices
