@@ -1,4 +1,25 @@
 import mongoose from 'mongoose'
+
+const trackingDetails = new mongoose.Schema({
+    invoiceId:{type:String,required:true},
+    containerNumber:{type:String},
+    pieces:{type:Number,required:true},
+    currentStatusDate:{ type: Date, required:true },
+    currentStatus:{ type: String, required: true },
+});
+const trackingHistory = new mongoose.Schema({
+    invoiceId:{type:String,required:true},
+    containerNumber:{type:String,required:true},
+    pieces:{type:Number,required:true},
+    oldStatusDate: { type: Date, required:true },
+    oldStatus: { type: String, required: true },
+    remarks: { type: String },
+    location: { type: String }, 
+    
+});
+
+
+
 const shipmentSchema = new mongoose.Schema({
     SenderName: { type: String, required: true },
     SenderMobile: { type: String, required: true },
@@ -79,8 +100,15 @@ const shipmentSchema = new mongoose.Schema({
     
     BiltyNo: { type: String },
   InvoiceNo: { type: String },
-    City:{type:String,required: true}
-    
+    City:{type:String,required: true},
+    tracking_details:{
+      type:[trackingDetails],
+      required:true
+    },
+    tracking_history:{
+      type:[trackingHistory],
+      default:[]
+    },
 }, {
     timestamps:true
 }) 
