@@ -63,8 +63,19 @@ export const addBookingController = async (req, res) => {
         else {
             invoiceNo = `101/${NoOfPieces}`
         }
+
+        const [invoiceId] = invoiceNo.split('/')
+        const tracking_details = {
+            invoiceId:invoiceId,
+            containerNumber: 'N/A',
+            pieces:NoOfPieces,
+            currentStatusDate:new Date(),
+            currentStatus:"Shipment in Godown",
+        }
+
         const newBooking = new shipmentSchemaModel(
-            { BiltyNo:trackingId, InvoiceNo:invoiceNo,SenderName,
+            { 
+              BiltyNo:trackingId, InvoiceNo:invoiceNo,SenderName,
                 SenderName,
                 SenderMobile,
                 SenderIdNumber,
@@ -92,9 +103,9 @@ export const addBookingController = async (req, res) => {
     
                 AmountInWords,
                 InvoiceTotal,
-                City
-            })
-        
+                City,
+                tracking_details:[tracking_details]
+            }) 
         await newBooking.save()
         return sendResponse(res, 200, false, {}, {
             bookingData: {
