@@ -178,7 +178,7 @@ export const updateSingleContainer = async (req, res) => {
         if (invNo && !isNaN(qty)) {
           map[invNo] = qty;
         }
-      }
+        }
       return map;
     };
 
@@ -189,10 +189,10 @@ export const updateSingleContainer = async (req, res) => {
       ...Object.keys(newInvoiceMap),
       ...Object.keys(previousInvoiceMap)
     ]);
-
+    const currentDate = new Date();
     for (const invNo of allInvoices) {
       const newQty = newInvoiceMap[invNo] || 0;
-      const oldQty = previousInvoiceMap[invNo] || 0;
+        const oldQty = previousInvoiceMap[invNo] || 0;
       const diff = newQty - oldQty;
 
       if (diff === 0) continue;
@@ -203,31 +203,90 @@ export const updateSingleContainer = async (req, res) => {
 
       let remainingDiff = Math.abs(diff);
 
+      // ... (Previous logic to calculate diff and remainingDiff)
+
       for (const s of shipments) {
-        if (remainingDiff <= 0) break;
+    if (remainingDiff <= 0) break;
 
-        const totalPieces = s.Pieces ?? s.NoOfPieces ?? 0;
+    const totalPieces = s.Pieces ?? s.NoOfPieces ?? 0;
+    const oldRemainingPieces = s.RemainingPieces; // Pehle ki remaining pieces save kar lo
 
-        // Ensure valid RemainingPieces
-        if (s.RemainingPieces === undefined || isNaN(s.RemainingPieces)) {
-          s.RemainingPieces = totalPieces;
-        }
+    // Ensure valid RemainingPieces
+    if (s.RemainingPieces === undefined || isNaN(s.RemainingPieces)) {
+        s.RemainingPieces = totalPieces;
+    }
 
+      let adjustedPieces = 0; 
+        
         if (diff > 0) {
-          // Invoice quantity INCREASED → subtract from remaining
-          const reduceQty = Math.min(s.RemainingPieces, remainingDiff);
-          s.RemainingPieces -= reduceQty;
-          remainingDiff -= reduceQty;
-        } else {
-          // Invoice quantity DECREASED or REMOVED → add back to remaining
-          const canAddBack = totalPieces - s.RemainingPieces;
-          const addBackQty = Math.min(canAddBack, remainingDiff);
-          s.RemainingPieces += addBackQty;
-          remainingDiff -= addBackQty;
-        }
+                    // CASE 1: Invoice quantity INCREASED (Pieces Godown se Container mein wapis jaa rahe hain)
+                    const reduceQty = Math.min(s.RemainingPieces, remainingDiff);
+                    s.RemainingPieces -= reduceQty;
+                    remainingDiff -= reduceQty;
+                    adjustedPieces = reduceQty; // Pieces jo Godown se Container mein gaye
+                    
+                    // --- Godown (N/A) Tracking Detail Update/Remove Logic ---
+                    if (adjustedPieces > 0) {
+                        const godownDetailIndex = s.tracking_details.findIndex(detail => 
+                            detail.containerNumber === 'N/A' && detail.currentStatus === 'Shipment in Godown'
+                        );
 
-        await s.save();
-      }
+                        if (godownDetailIndex !== -1) {
+                            const godownDetail = s.tracking_details[godownDetailIndex];
+
+                            if (godownDetail.pieces > adjustedPieces) {
+                                godownDetail.pieces -= adjustedPieces;
+                                godownDetail.currentStatusDate = currentDate
+                              } else {
+                                s.tracking_details.splice(godownDetailIndex, 1);
+                            }
+                        }
+                    }
+                } else {
+                    // CASE 2: Invoice quantity DECREASED (Pieces Container se Godown mein wapis aa rahe hain)
+                    const canAddBack = totalPieces - s.RemainingPieces;
+                    const addBackQty = Math.min(canAddBack, remainingDiff);
+                    s.RemainingPieces += addBackQty;
+                    remainingDiff -= addBackQty;
+                    
+                    const piecesAddedBack = s.RemainingPieces - oldRemainingPieces; 
+                    
+                    if (piecesAddedBack > 0) {
+                        // Naya record push for Godown entry
+                        s.tracking_details.push({
+                            invoiceId: s.InvoiceNo, 
+                            containerNumber: 'N/A', 
+                            pieces: piecesAddedBack, 
+                            currentStatusDate: currentDate,
+                            currentStatus: "Shipment in Godown",
+                        });
+                    }
+                }
+
+    // -----------------------------------------------------
+    // ✅ Existing LOGIC: Update tracking_details pieces (Shipment in Container entry)
+    // -----------------------------------------------------
+                const trackingDetailIndex = s.tracking_details.findIndex(detail => 
+                    detail.containerNumber === containerNumber && detail.currentStatus !== 'Shipment in Godown'
+                );
+     if (trackingDetailIndex !== -1) {
+            const trackingDetail = s.tracking_details[trackingDetailIndex];
+            const piecesInContainer = totalPieces - s.RemainingPieces;
+            
+            if (piecesInContainer > 0) {
+                trackingDetail.pieces = Math.max(0, piecesInContainer);
+                trackingDetail.currentStatusDate = currentDate;
+              } else {
+                // Saare pieces nikal gaye, toh container entry delete kar do.
+                s.tracking_details.splice(trackingDetailIndex, 1);
+            }
+        }
+    // -----------------------------------------------------
+    
+    await s.save();
+}
+
+// ... (Rest of the function)
     }
 
     // Sync containerNumberModel if previousInvoices match
@@ -542,8 +601,8 @@ export const deleteSingleContainer = async (req, res) => {
       }, null);
     }
 
-    // ✅ If container is not delivered, we need to return pieces to shipments
-    if (statusLower === "shipment in container") {
+    // If container is not delivered, we need to return pieces to shipments
+      if (statusLower === "shipment in container") {
       for (const fullInvoice of container.Invoices) {
         const baseInvoice = fullInvoice.split("/")[0];
         const containerInvoiceQty = parseInt(fullInvoice.split("/")[1] || "0");
@@ -556,9 +615,59 @@ export const deleteSingleContainer = async (req, res) => {
           const totalPieces = shipment.NoOfPieces || 0;
           const currentRemaining = shipment.RemainingPieces || 0;
           const addBackQty = Math.min(containerInvoiceQty, totalPieces - currentRemaining);
-
+          const currentDate = new Date()
           shipment.RemainingPieces += addBackQty;
+                     const trackingDetailIndex = shipment.tracking_details.findIndex(detail => 
+                        detail.containerNumber === container.ContainerNumber
+                    );
+                    
+                    if (trackingDetailIndex !== -1) {
+                        // C. Tracking Details se Container Entry Remove
+                        // Container ki entry delete hogi, chahe pieces kam huye hon ya wohi
+                        shipment.tracking_details.splice(trackingDetailIndex, 1);
+                        
+                        // D. New Godown Entry Push
+                        // Pieces jo wapis aaye hain (addBackQty) unke liye Godown entry push karo
+                        if (addBackQty > 0) {
+                            shipment.tracking_details.push({
+                                // Note: Yahan hum invoiceId ke bajaye shipment ka InvoiceNo use kar rahe hain (agar woh unique hai)
+                                invoiceId: baseInvoice, 
+                                containerNumber: 'N/A', 
+                                pieces: addBackQty, // Jitne pieces wapis aaye
+                                currentStatusDate: currentDate,
+                                currentStatus: "Shipment in Godown",
+                            });
+                        }
+                    }
+  
+                              // 🧩 Save shipment to persist RemainingPieces + tracking_details updates
           await shipment.save();
+                    
+            const invoicePatterns = container.Invoices.map(
+  (inv) => new RegExp(`^${inv.split("/")[0]}`, "i")
+);
+console.log("🧾 Removing tracking history for shipment:", {
+  invoice: shipment.InvoiceNo,
+  containerNumber: container.ContainerNumber,
+  invoicePatterns,
+});
+
+const result = await shipmentSchemaModel.updateOne(
+  { _id: shipment._id },
+  {
+    $pull: {
+      tracking_history: {
+        $or: [
+          { containerNumber: container.ContainerNumber },
+          { invoiceId: { $in: invoicePatterns } },
+        ],
+      },
+    },
+  }
+);
+
+console.log("MongoDB $pull result:", result);
+
         }
       }
     }
