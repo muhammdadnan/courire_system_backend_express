@@ -107,7 +107,8 @@ const shipmentSchema = new mongoose.Schema({
     },
     tracking_history:{
       type:[trackingHistory],
-      default:[]
+      required:true
+      
     },
 }, {
     timestamps:true

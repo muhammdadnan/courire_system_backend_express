@@ -72,6 +72,13 @@ export const addBookingController = async (req, res) => {
             currentStatusDate:new Date(),
             currentStatus:"Shipment in Godown",
         }
+        const tracking_history = {
+            invoiceId:invoiceId,
+            containerNumber: 'N/A',
+            pieces:NoOfPieces,
+            oldStatusDate:tracking_details.currentStatusDate,
+            oldStatus:"Shipment in Godown",
+        }
 
         const newBooking = new shipmentSchemaModel(
             { 
@@ -104,7 +111,9 @@ export const addBookingController = async (req, res) => {
                 AmountInWords,
                 InvoiceTotal,
                 City,
-                tracking_details:[tracking_details]
+                tracking_details:[tracking_details],
+                tracking_history:[tracking_history]
+
             }) 
         await newBooking.save()
         return sendResponse(res, 200, false, {}, {
