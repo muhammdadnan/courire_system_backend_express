@@ -52,12 +52,19 @@ const detailToUpdate = findInvoice || s.tracking_details[s.tracking_details.leng
 
 // agr details to update makxhha to phr
 if (detailToUpdate) {
+  const  mix_history_details = {
+        invoiceId: invNo, 
+        containerNumber: containerNumber,
+        pieces: shipQty, 
+        date: new Date(),
+        status: status,
+  }
     s.tracking_history.push({
-        invoiceId: detailToUpdate.invoiceId, 
-        containerNumber: detailToUpdate.containerNumber || 'N/A',
-        pieces: detailToUpdate.pieces, 
-        oldStatusDate: detailToUpdate.currentStatusDate,
-        oldStatus: detailToUpdate.currentStatus,
+        invoiceId: mix_history_details.invoiceId, 
+        containerNumber: mix_history_details.containerNumber,
+        pieces: mix_history_details.pieces, 
+        oldStatusDate: mix_history_details.date,
+        oldStatus: mix_history_details.status,
         // location: fromDestination, // Ya jo bhi purani location thi
         // remarks: `Pieces split/moved to Container ${containerNumber}. Shipped Qty: ${shipQty} pcs.`,
         // slNo: s.tracking_history.length + 1,
@@ -72,34 +79,28 @@ if (detailToUpdate) {
         
         // Aur naya shipped piece ka record push hoga.
         s.tracking_details.push({
-            invoiceId: s.InvoiceNo,
-            containerNumber: containerNumber,
-            pieces: shipQty, 
-            currentStatusDate: new Date(),
-            currentStatus: status,
-            location: toDestination, 
+            invoiceId: mix_history_details.invoiceId,
+            containerNumber: mix_history_details.containerNumber,
+            pieces: mix_history_details.pieces, 
+            currentStatusDate: mix_history_details.date,
+            currentStatus: mix_history_details.status,
+            // location: toDestination, 
         });
         
     } else {
         // Agar saare pieces ship ho gaye (remainingInOldRecord <= 0), 
         // to isi record ko naye status se update kar do.
-        detailToUpdate.containerNumber = containerNumber;
-        detailToUpdate.pieces = shipQty; // Total pieces shipped (ya detailToUpdate.pieces)
-        detailToUpdate.currentStatusDate = new Date();
-        detailToUpdate.currentStatus = status;
-        detailToUpdate.location = toDestination;
+
+
+
+
+
+        detailToUpdate.containerNumber = mix_history_details.containerNumber;
+        detailToUpdate.pieces = mix_history_details.pieces; // Total pieces shipped (ya detailToUpdate.pieces)
+        detailToUpdate.currentStatusDate = mix_history_details.date;
+        detailToUpdate.currentStatus = mix_history_details.status;
+        // detailToUpdate.location = toDestination;
     }
-} else {
-    // Agar tracking_details empty hai ya koi match nahi mila
-    // Handle error or push new entry
-    s.tracking_details.push({
-        invoiceId: s.InvoiceNo,
-        containerNumber: containerNumber,
-        pieces: shipQty,
-        currentStatusDate: new Date(),
-        currentStatus: status,
-        location: toDestination, 
-    });
 }
 
 // 4. Save the top-level document
@@ -511,7 +512,6 @@ export const updateBulkContainerStatus = async (req, res) => {
 };
 
 
-
 // export const deleteSingleContainer = async (req, res) => {
 //   try {
 //     const { id } = req.params;
@@ -525,56 +525,208 @@ export const updateBulkContainerStatus = async (req, res) => {
 //       return sendResponse(res, 404, true, { general: "Container not found" }, null);
 //     }
 
-//     // // ✅ Only allow delete if status is "Shipment In Container"
-//     // if (container.Status !== "Shipment In Container") {
-//     //   return sendResponse(res, 400, true, { general: `This container is no more deletable, Status :${container.Status}` }, null);
-//     // }
-//     // ✅ Allow delete only if status is "Shipment In Container" or "Delivered" (case-insensitive)
-//     const statusLower = container.Status?.toLowerCase();
-//     if (statusLower !== "shipment in container" && statusLower !== "delivered") {
+//     const statusLower = container.Status.toLowerCase();
+
+//     // ✅ Only allow deletion if status is either "shipment in container" or "delivered"
+//     if (
+//       statusLower !== "shipment in container" &&
+//       statusLower !== "delivered"
+//     ) {
 //       return sendResponse(res, 400, true, {
-//         general: `This container is not deletable. Current Status: ${container.Status}`
+//         general: `Container cannot be deleted. Status: ${container.Status}`,
 //       }, null);
 //     }
 
-//     // // ✅ Reset invoices in containerNumberModel
-//     // await containerNumberModel.findOneAndUpdate(
-//     //   { ContainerNumber: container.ContainerNumber },
-//     //   { $set: { Invoices: null } }
-//     // );
+//     // If container is not delivered, we need to return pieces to shipments
+//       if (statusLower === "shipment in container") {
+//       for (const fullInvoice of container.Invoices) {
+//         const baseInvoice = fullInvoice.split("/")[0];
+//         const containerInvoiceQty = parseInt(fullInvoice.split("/")[1] || "0");
 
-//      // ✅ Delete corresponding containerNumberModel
-//     await containerNumberModel.findOneAndDelete({
-//       ContainerNumber: container.ContainerNumber
-//     });
+//         const matchingShipments = await shipmentSchemaModel.find({
+//           InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` },
+//         });
 
+//         for (const shipment of matchingShipments) {
+//           const totalPieces = shipment.NoOfPieces || 0;
+//           const currentDate = new Date()
+//           const currentRemaining = shipment.RemainingPieces || 0;
+//           const addBackQty = Math.min(containerInvoiceQty, totalPieces - currentRemaining);
+//           shipment.RemainingPieces += addBackQty;
+//                      const trackingDetailIndex = shipment.tracking_details.findIndex(detail => 
+//                         detail.containerNumber === container.ContainerNumber
+//                     );
+                    
+//                     if (trackingDetailIndex !== -1) {
+//                         // C. Tracking Details se Container Entry Remove
+//                         // Container ki entry delete hogi, chahe pieces kam huye hon ya wohi
+//                         shipment.tracking_details.splice(trackingDetailIndex, 1);
+                        
+//                         // D. New Godown Entry Push
+//                         // Pieces jo wapis aaye hain (addBackQty) unke liye Godown entry push karo
+//                         if (addBackQty > 0) {
+//                             shipment.tracking_details.push({
+//                                 // Note: Yahan hum invoiceId ke bajaye shipment ka InvoiceNo use kar rahe hain (agar woh unique hai)
+//                                 invoiceId: baseInvoice, 
+//                                 containerNumber: 'N/A', 
+//                                 pieces: addBackQty, // Jitne pieces wapis aaye
+//                                 currentStatusDate: currentDate,
+//                                 currentStatus: "Shipment in Godown",
+//                             });
+//                         }
+//                     }
+  
+//                               // 🧩 Save shipment to persist RemainingPieces + tracking_details updates
+//           await shipment.save();
+                    
+//             const invoicePatterns = container.Invoices.map(
+//   (inv) => new RegExp(`^${inv.split("/")[0]}`, "i")
+// );
+// console.log("🧾 Removing tracking history for shipment:", {
+//   invoice: shipment.InvoiceNo,
+//   containerNumber: container.ContainerNumber,
+//   invoicePatterns,
+// });
 
-//     // ✅ For each invoice, find all shipments with InvoiceNo like "123", "123/1", "123/2", etc.
-//     for (const fullInvoice of container.Invoices) {
-//       const baseInvoice = fullInvoice.split("/")[0];
+// const result = await shipmentSchemaModel.updateOne(
+//   { _id: shipment._id },
+//   {
+//     $pull: {
+//       tracking_history: {
+//         $or: [
+//           { containerNumber: container.ContainerNumber },
+//           { invoiceId: { $in: invoicePatterns } },
+//         ],
+//       },
+//     },
+//   }
+// );
 
-//       const matchingShipments = await shipmentSchemaModel.find({
-//         InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` }
-//       });
+// console.log("MongoDB $pull result:", result);
 
-//       for (const shipment of matchingShipments) {
-//         shipment.RemainingPieces = shipment.NoOfPieces;
-//         await shipment.save();
+//         }
 //       }
 //     }
 
-//     // ✅ Finally delete the container
+//     // ✅ Always delete the corresponding containerNumberModel record
+//     await containerNumberModel.findOneAndDelete({
+//       ContainerNumber: container.ContainerNumber,
+//     });
+
+//     // ✅ Finally delete the container itself
 //     await containerModel.findByIdAndDelete(id);
 
 //     return sendResponse(res, 200, false, {}, {
-//       message: "Container deleted, invoices reset, and remaining pieces updated successfully."
+//       message: `Container deleted successfully. ${
+//         statusLower === "shipment in container" ? "Shipments updated." : "Shipments untouched (delivered)."
+//       }`,
 //     });
-
 //   } catch (error) {
 //     console.error("Error deleting container:", error);
 //     return sendResponse(res, 500, true, { general: error.message }, null);
 //   }
 // };
+// export const deleteSingleContainer = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+//       return sendResponse(res, 400, true, { general: "Invalid Container ID" }, null);
+//     }
+
+//     const container = await containerModel.findById(id);
+//     if (!container) {
+//       return sendResponse(res, 404, true, { general: "Container not found" }, null);
+//     }
+
+//     const statusLower = container.Status.toLowerCase();
+
+//     // ✅ Only allow deletion if status is either "shipment in container" or "delivered"
+//     if (
+//       statusLower !== "shipment in container" &&
+//       statusLower !== "delivered"
+//     ) {
+//       return sendResponse(res, 400, true, {
+//         general: `Container cannot be deleted. Status: ${container.Status}`,
+//       }, null);
+//     }
+
+//     // ✅ If container is not delivered → roll back tracking info
+//     if (statusLower === "shipment in container") {
+//       for (const fullInvoice of container.Invoices) {
+//         const baseInvoice = fullInvoice.split("/")[0];
+//         const containerInvoiceQty = parseInt(fullInvoice.split("/")[1] || "0");
+
+//         const shipments = await shipmentSchemaModel.find({
+//           InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` },
+//         });
+
+//         for (const shipment of shipments) {
+//           const totalPieces = shipment.NoOfPieces || 0;
+//           const currentDate = new Date();
+
+//           // ✅ 1. Remove tracking detail for this container
+//           shipment.tracking_details = shipment.tracking_details.filter(
+//             (d) => d.containerNumber !== container.ContainerNumber
+//           );
+
+//           // ✅ 2. Check if this invoice is still shipped in any other container
+//           const stillShipped = shipment.tracking_details.some(
+//             (d) =>
+//               d.containerNumber !== "N/A" &&
+//               d.currentStatus !== "Shipment in Godown"
+//           );
+
+//           // ✅ 3. If not shipped anywhere else → revert back to full "Shipment in Godown"
+//           if (!stillShipped) {
+//             // Remove old N/A entries first (to avoid duplicates)
+//             shipment.tracking_details = shipment.tracking_details.filter(
+//               (d) => d.containerNumber !== "N/A"
+//             );
+
+//             shipment.tracking_details.push({
+//               invoiceId: baseInvoice,
+//               containerNumber: "N/A",
+//               pieces: totalPieces, // ✅ restore original total pieces
+//               currentStatusDate: currentDate,
+//               currentStatus: "Shipment in Godown",
+//             });
+//           }
+
+//           // ✅ 4. Clean up tracking_history — keep the original creation entry,
+//           // and remove only records related to this container.
+//           shipment.tracking_history = shipment.tracking_history.filter(
+//             (h, index) =>
+//               index === 0 || // keep first ever history (creation)
+//               h.containerNumber !== container.ContainerNumber
+//           );
+
+//           await shipment.save();
+//         }
+//       }
+//     }
+
+//     // ✅ Always delete the corresponding containerNumberModel record
+//     await containerNumberModel.findOneAndDelete({
+//       ContainerNumber: container.ContainerNumber,
+//     });
+
+//     // ✅ Finally delete the container itself
+//     await containerModel.findByIdAndDelete(id);
+
+//     return sendResponse(res, 200, false, {}, {
+//       message: `Container deleted successfully. ${
+//         statusLower === "shipment in container"
+//           ? "Shipments rolled back to godown where applicable."
+//           : "Shipments untouched (delivered)."
+//       }`,
+//     });
+//   } catch (error) {
+//     console.error("❌ Error deleting container:", error);
+//     return sendResponse(res, 500, true, { general: error.message }, null);
+//   }
+// };
+
 
 export const deleteSingleContainer = async (req, res) => {
   try {
@@ -601,73 +753,69 @@ export const deleteSingleContainer = async (req, res) => {
       }, null);
     }
 
-    // If container is not delivered, we need to return pieces to shipments
-      if (statusLower === "shipment in container") {
+    // ✅ If container is not delivered → roll back tracking info
+    if (statusLower === "shipment in container") {
       for (const fullInvoice of container.Invoices) {
         const baseInvoice = fullInvoice.split("/")[0];
         const containerInvoiceQty = parseInt(fullInvoice.split("/")[1] || "0");
-
-        const matchingShipments = await shipmentSchemaModel.find({
+        
+        const shipments = await shipmentSchemaModel.find({
           InvoiceNo: { $regex: `^${baseInvoice}(\\/\\d+)?$` },
         });
 
-        for (const shipment of matchingShipments) {
+        for (const shipment of shipments) {
           const totalPieces = shipment.NoOfPieces || 0;
+          const currentDate = new Date();
           const currentRemaining = shipment.RemainingPieces || 0;
           const addBackQty = Math.min(containerInvoiceQty, totalPieces - currentRemaining);
-          const currentDate = new Date()
           shipment.RemainingPieces += addBackQty;
-                     const trackingDetailIndex = shipment.tracking_details.findIndex(detail => 
-                        detail.containerNumber === container.ContainerNumber
-                    );
-                    
-                    if (trackingDetailIndex !== -1) {
-                        // C. Tracking Details se Container Entry Remove
-                        // Container ki entry delete hogi, chahe pieces kam huye hon ya wohi
-                        shipment.tracking_details.splice(trackingDetailIndex, 1);
-                        
-                        // D. New Godown Entry Push
-                        // Pieces jo wapis aaye hain (addBackQty) unke liye Godown entry push karo
-                        if (addBackQty > 0) {
-                            shipment.tracking_details.push({
-                                // Note: Yahan hum invoiceId ke bajaye shipment ka InvoiceNo use kar rahe hain (agar woh unique hai)
-                                invoiceId: baseInvoice, 
-                                containerNumber: 'N/A', 
-                                pieces: addBackQty, // Jitne pieces wapis aaye
-                                currentStatusDate: currentDate,
-                                currentStatus: "Shipment in Godown",
-                            });
-                        }
-                    }
-  
-                              // 🧩 Save shipment to persist RemainingPieces + tracking_details updates
+          // ✅ 1. Remove tracking detail for this container
+          shipment.tracking_details = shipment.tracking_details.filter(
+            (d) => d.containerNumber !== container.ContainerNumber
+          );
+
+          // ✅ 2. Check if this invoice is still shipped in any other container
+          const stillShipped = shipment.tracking_details.some(
+            (d) =>
+              d.containerNumber !== "N/A" &&
+              d.currentStatus !== "Shipment in Godown"
+          );
+
+          // ✅ 3. If not shipped anywhere else → revert back to full "Shipment in Godown"
+          if (!stillShipped) {
+            // Remove old N/A entries first (to avoid duplicates)
+            shipment.tracking_details = shipment.tracking_details.filter(
+              (d) => d.containerNumber !== "N/A"
+            );
+
+            shipment.tracking_details.push({
+              invoiceId: baseInvoice,
+              containerNumber: "N/A",
+              pieces: totalPieces, // ✅ restore original total pieces
+              currentStatusDate: currentDate,
+              currentStatus: "Shipment in Godown",
+            });
+          }
+          // ✅ 3B. If shipped partially in other containers → add back only deleted pieces
+else if (containerInvoiceQty > 0) {
+  shipment.tracking_details.push({
+    invoiceId: baseInvoice,
+    containerNumber: "N/A",
+    pieces: containerInvoiceQty, // ✅ only return deleted container’s pieces
+    currentStatusDate: currentDate,
+    currentStatus: "Shipment in Godown",
+  });
+}
+
+          // ✅ 4. Clean up tracking_history — keep the original creation entry,
+          // and remove only records related to this container.
+          shipment.tracking_history = shipment.tracking_history.filter(
+            (h, index) =>
+              index === 0 || // keep first ever history (creation)
+              h.containerNumber !== container.ContainerNumber
+          );
+
           await shipment.save();
-                    
-            const invoicePatterns = container.Invoices.map(
-  (inv) => new RegExp(`^${inv.split("/")[0]}`, "i")
-);
-console.log("🧾 Removing tracking history for shipment:", {
-  invoice: shipment.InvoiceNo,
-  containerNumber: container.ContainerNumber,
-  invoicePatterns,
-});
-
-const result = await shipmentSchemaModel.updateOne(
-  { _id: shipment._id },
-  {
-    $pull: {
-      tracking_history: {
-        $or: [
-          { containerNumber: container.ContainerNumber },
-          { invoiceId: { $in: invoicePatterns } },
-        ],
-      },
-    },
-  }
-);
-
-console.log("MongoDB $pull result:", result);
-
         }
       }
     }
@@ -682,11 +830,13 @@ console.log("MongoDB $pull result:", result);
 
     return sendResponse(res, 200, false, {}, {
       message: `Container deleted successfully. ${
-        statusLower === "shipment in container" ? "Shipments updated." : "Shipments untouched (delivered)."
+        statusLower === "shipment in container"
+          ? "Shipments rolled back to godown where applicable."
+          : "Shipments untouched (delivered)."
       }`,
     });
   } catch (error) {
-    console.error("Error deleting container:", error);
+    console.error("❌ Error deleting container:", error);
     return sendResponse(res, 500, true, { general: error.message }, null);
   }
 };
