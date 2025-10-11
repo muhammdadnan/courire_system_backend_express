@@ -456,8 +456,8 @@ export const updateSinglelContainerStatus = async (req, res) => {
           invoiceId: trackingDetail.invoiceId,
           containerNumber: trackingDetail.containerNumber,
           pieces: trackingDetail.pieces,
-          oldStatusDate: trackingDetail.currentStatusDate, // tracking_details se purani date
-          oldStatus: trackingDetail.currentStatus,         // tracking_details se purana status
+          oldStatusDate: newStatusDate, // tracking_details se purani date
+          oldStatus: Status,         // tracking_details se purana status
           // remarks: Remarks || '',
           // location: Location || '',
         });
@@ -531,8 +531,8 @@ export const updateBulkContainerStatus = async (req, res) => {
                             invoiceId: trackingDetail.invoiceId,
                             containerNumber: trackingDetail.containerNumber,
                             pieces: trackingDetail.pieces,
-                            oldStatusDate: trackingDetail.currentStatusDate, // Purani date (history mein save)
-                            oldStatus: trackingDetail.currentStatus,         // Purana status (history mein save)
+                            oldStatusDate: newStatusDate, // Purani date (history mein save)
+                            oldStatus: status,         // Purana status (history mein save)
                             // remarks: remarks || `Status updated in bulk to ${status}`,
                             // location: location || updatedContainer.Location || '',
                         });
