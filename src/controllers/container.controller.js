@@ -86,8 +86,17 @@ if (detailToUpdate) {
             currentStatus: mix_history_details.status,
             // location: toDestination, 
         });
+    //      // ✅ Reflect updated state in tracking_history
+    // s.tracking_history = s.tracking_details.map(detail => ({
+    //     invoiceId: detail.invoiceId,
+    //     containerNumber: detail.containerNumber,
+    //     pieces: detail.pieces,
+    //     oldStatusDate: detail.currentStatusDate,
+    //     oldStatus: detail.currentStatus,
+    // }));
         
-    } else {
+    }
+     else {
         // Agar saare pieces ship ho gaye (remainingInOldRecord <= 0), 
         // to isi record ko naye status se update kar do.
 
@@ -100,6 +109,8 @@ if (detailToUpdate) {
         detailToUpdate.currentStatusDate = mix_history_details.date;
         detailToUpdate.currentStatus = mix_history_details.status;
         // detailToUpdate.location = toDestination;
+
+        
     }
 }
 
@@ -255,7 +266,7 @@ export const updateSingleContainer = async (req, res) => {
                     if (piecesAddedBack > 0) {
                         // Naya record push for Godown entry
                         s.tracking_details.push({
-                            invoiceId: s.InvoiceNo, 
+                            invoiceId: invNo, 
                             containerNumber: 'N/A', 
                             pieces: piecesAddedBack, 
                             currentStatusDate: currentDate,
@@ -283,7 +294,53 @@ export const updateSingleContainer = async (req, res) => {
             }
         }
     // -----------------------------------------------------
-    
+      // ✅ Sync tracking_history with tracking_details (to reflect updated pieces & statuses)
+// const totalPieces = s.Pieces ?? s.NoOfPieces ?? 0;
+const godownRecord = {
+  invoiceId: invNo,
+  containerNumber: "N/A",
+  pieces: totalPieces,
+  oldStatusDate: s.createdAt || new Date(),
+  oldStatus: "Shipment in Godown",
+};
+
+// Build history snapshot from current tracking_details
+const containerHistory = s.tracking_details
+.filter(detail => !(detail.containerNumber === 'N/A' && detail.currentStatus === 'Shipment in Godown'))
+.map(detail => ({
+  invoiceId: detail.invoiceId,
+  containerNumber: detail.containerNumber,
+  pieces: detail.pieces,
+  oldStatusDate: detail.currentStatusDate || new Date(),
+  oldStatus: detail.currentStatus,
+}));
+
+// Always keep the original godown record at the top
+s.tracking_history = [godownRecord, ...containerHistory];
+// ✅ Merge multiple "Shipment in Godown" entries into one
+const godownEntries = s.tracking_details.filter(
+  d => d.containerNumber === 'N/A' && d.currentStatus === 'Shipment in Godown'
+);
+
+if (godownEntries.length > 1) {
+  const totalGodownPieces = godownEntries.reduce((sum, d) => sum + (d.pieces || 0), 0);
+  const latestDate = godownEntries[godownEntries.length - 1].currentStatusDate || new Date();
+
+  // Remove old Godown entries
+  s.tracking_details = s.tracking_details.filter(
+    d => !(d.containerNumber === 'N/A' && d.currentStatus === 'Shipment in Godown')
+  );
+
+  // Push single merged record
+  s.tracking_details.push({
+    invoiceId: invNo,
+    containerNumber: 'N/A',
+    pieces: totalGodownPieces,
+    currentStatusDate: latestDate,
+    currentStatus: 'Shipment in Godown',
+  });
+}
+
     await s.save();
 }
 
