@@ -8,13 +8,13 @@ export const importexcel = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // Read Excel
-    const workbook = xlsx.readFile(file.path);
+    // ✅ Read Excel directly from memory (no file.path)
+    const workbook = xlsx.read(file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const data = xlsx.utils.sheet_to_json(sheet);
 
-    // Mapping
+    // ✅ Mapping
     const shipments = data.map((row) => ({
       SenderName: row["Sender Name"],
       SenderMobile: row["Sender Mobile"],
@@ -42,15 +42,15 @@ export const importexcel = async (req, res) => {
       TrackingDetails: row["Tracking Details"],
       TrackingHistory: row["Tracking History"],
       Status: row["Status"],
-      totalWeight: row["No Of Pieces"], // agar ye required hai schema me
+      totalWeight: row["No Of Pieces"], // optional
     }));
 
-    // Save to DB
+    // ✅ Save to DB
     await shipmentSchema.insertMany(shipments);
 
     res.status(200).json({ message: "Excel Imported Successfully!" });
   } catch (error) {
     console.error("Error importing Excel file:", error);
-    res.status(500).json({ message: "Error importing Excel file", error });
+    res.status(500).json({ message: "Error importing Excel file", error: error.message });
   }
 };
