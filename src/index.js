@@ -29,8 +29,8 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
      app.use('/api',CountryRouter)
      app.use('/api',ContainerNumberRouter)
     app.use('/uploads', express.static('uploads'));
-    
-    app.listen(5000, () => {
+    const port = process.env.PORT || 5000
+    app.listen(port, () => {
         console.log(`Server is running on port ${5000}`);
         
     })
