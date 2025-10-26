@@ -88,16 +88,17 @@ const shipmentSchema = new mongoose.Schema(
         qty: { type: Number, default: 0 },
         total: { type: Number, default: 0 },
       },
-      Discount: {
-        enabled: { type: Boolean, default: false },
-        unitRate: { type: Number, default: 0 },
-        qty: { type: Number, default: 0 },
-        total: { type: Number, default: 0 },
-      },
+      // Discount: {
+      //   enabled: { type: Boolean, default: false },
+      //   unitRate: { type: Number, default: 0 },
+      //   qty: { type: Number, default: 0 },
+      //   total: { type: Number, default: 0 },
+      // },
     },
     SubTotal: { type: Number },
     Vat: { type: Number },
     VatTotal: { type: Number },
+    Discount: {type: Number},
     InvoiceTotal: { type: Number },
 
     AmountInWords: { type: String },
